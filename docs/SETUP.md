@@ -2,7 +2,7 @@
 
 Este Routine no necesita credenciales propias ni archivos `.env` con secretos. Todo el trabajo lo hace a través de tres conectores MCP de Composio que ya tienes vinculados a tu cuenta de Microsoft (Natalie Aguirre):
 
-1. **Outlook** — para leer correos de `areamarketing@inelinc.com` y moverlos a la carpeta `Procesados`.
+1. **Outlook** — para leer correos de `marketing@inelinc.com` y moverlos a la carpeta `Procesados`.
 2. **Microsoft Teams** — para enviar los mensajes a los grupos y al DM de Renato Burneo.
 3. **Excel** — para leer y escribir la columna "Nación" de la hoja `Testeos`.
 
@@ -36,7 +36,7 @@ Este Routine no necesita credenciales propias ni archivos `.env` con secretos. T
 ## Verificación del primer run
 
 Revisa:
-- Que la carpeta `Procesados` se haya creado (si no existía) dentro de `areamarketing@inelinc.com`.
+- Que la carpeta `Procesados` se haya creado (si no existía) dentro de `marketing@inelinc.com`.
 - Que los correos pendientes hayan llegado a los chats de Teams correctos según la tabla de ruteo de `CLAUDE.md`.
 - Si un correo era TESTEO, que la columna M de la hoja `Testeos` tenga la nueva "Nación" escrita correctamente.
 - Que no haya mensajes inesperados en el grupo "POD'S Operaciones (Nadie habla)" (grupo de errores).
