@@ -16,8 +16,8 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 2. Para cada correo (del más antiguo al más reciente):
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
    - Clasificarlo en una de las 12 categorías (sección 4).
-   - Determinar el destino según la tabla de ruteo (sección 5): puede ser un grupo de Microsoft Teams, un reenvío por email (RP), o ningún destino (PROVEEDOR_ADMIN_EXTERNO/OTRO).
-   - Si corresponde, enviar el mensaje/reenvío formateado a ese destino (sección 6). Si no corresponde (PROVEEDOR_ADMIN_EXTERNO/OTRO), omitir este paso.
+   - Determinar el destino en Microsoft Teams según la tabla de ruteo (sección 5): un grupo, un DM, o ningún destino (PROVEEDOR_ADMIN_EXTERNO/OTRO).
+   - Si corresponde, enviar el mensaje formateado a ese destino (sección 6). Si no corresponde (PROVEEDOR_ADMIN_EXTERNO/OTRO), omitir este paso.
    - Mover el correo a la carpeta `Procesados` (crearla si no existe).
 3. Reportar al final un resumen: cuántos correos se procesaron, a qué categoría/destino fue cada uno.
 
@@ -48,8 +48,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 | Clasificación en 12 categorías | **Razonamiento de Claude** | Sin tool — usa criterio propio sobre asunto/cuerpo/remitente/CC (sección 4) |
 | Leer última "Nación" asignada en Excel "Testeos" (col M) | **Excel MCP (Composio)** | `EXCEL_GET_RANGE`, sin `session_id` para solo lectura |
 | Escribir nueva "Nación" en Excel "Testeos" (col M, nueva fila) | **Excel MCP (Composio)** | `EXCEL_GET_SESSION` → `EXCEL_UPDATE_RANGE` → `EXCEL_CLOSE_SESSION` |
-| Enviar mensaje a Microsoft Teams (grupo) | **Teams MCP (Composio)** | `MICROSOFT_TEAMS_*` para enviar mensaje al chat correspondiente (no aplica a RP/PROVEEDOR_ADMIN_EXTERNO/OTRO) |
-| Reenviar correo (RP) a `renatoburneo@inelinc.com` | **Outlook MCP (Composio)** | Forward del correo original, manteniendo asunto/cuerpo |
+| Enviar mensaje a Microsoft Teams (grupo o DM) | **Teams MCP (Composio)** | `MICROSOFT_TEAMS_*` para enviar mensaje al chat correspondiente (no aplica a PROVEEDOR_ADMIN_EXTERNO/OTRO) |
 | Mover correo procesado a `Procesados` | **Outlook MCP (Composio)** | Mover, no copiar |
 
 No hay scripts de Python — todas las operaciones tienen MCP remoto disponible y conectado.
@@ -119,7 +118,7 @@ Va **directo a NACIÓN AGUA**.
 
 ### 4.6 RP, PROVEEDOR_ADMIN_EXTERNO, OTRO
 
-- **RP**: reenvía el correo por **email** (Outlook MCP, `OUTLOOK_*` forward/send) a `renatoburneo@inelinc.com`. NO uses Teams para esto.
+- **RP**: envía el mensaje al **DM de Renato Burneo en Microsoft Teams** (chat ID en sección 5).
 - **PROVEEDOR_ADMIN_EXTERNO** y **OTRO**: **no se reenvían ni notifican a nadie**, por privacidad. Simplemente clasifícalos (para el resumen final) y muévelos a `Procesados` sin enviar ningún mensaje a Teams ni email.
 
 ### 4.7 DISEÑO_CUSTOM
@@ -144,13 +143,8 @@ Va **directo a POD 3**.
 | Destino | Chat ID |
 |---|---|
 | POD 3 (DISEÑO_CUSTOM) | `19:887c0ff964564890861115def582e8a4@thread.v2` |
+| DM Renato Burneo (RP) | `19:44aacc1b-f58c-42d6-bd93-a0fdae96ae2d_c53be72d-d4a8-4d96-ba99-e9f15bee6d4e@unq.gbl.spaces` |
 | Grupo de errores / "general" ("POD'S Operaciones (Nadie habla)") | `19:7ae5575d52c04e6c937c2e694a86e760@thread.v2` |
-
-### Email (no Teams)
-
-| Destino | Email |
-|---|---|
-| RP (reenvío por correo) | `renatoburneo@inelinc.com` |
 
 ### Resumen final por categoría
 
@@ -164,7 +158,7 @@ Va **directo a POD 3**.
 | ASYNC_CURSO | NACIÓN AIRE |
 | INEL_CORP_GRID | NACIÓN TIERRA |
 | CONTENT_INEL | NACIÓN AGUA |
-| RP | Email a `renatoburneo@inelinc.com` |
+| RP | DM Renato Burneo |
 | INEL_NOVA_EVENTOS | NACIÓN AIRE |
 | DISEÑO_CUSTOM | POD 3 |
 | PROVEEDOR_ADMIN_EXTERNO | Ninguno (solo mover a Procesados, sin notificar) |
