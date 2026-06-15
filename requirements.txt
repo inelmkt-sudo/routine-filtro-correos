@@ -1,0 +1,3 @@
+# Este Routine no usa scripts de Python: todas las operaciones se hacen
+# vía MCPs remotos (Outlook, Teams, Excel) ya conectados al entorno.
+# Sin dependencias.
