@@ -1,4 +1,6 @@
-# Clasificador y Enrutador de Correos — marketing@inelinc.com
+# Clasificador y Enrutador de Correos — Bandeja de Marketing (Natalie Aguirre)
+
+> Todos los correos dirigidos al alias `marketing@inelinc.com` llegan a la bandeja personal de Natalie (`natalieaguirre@inelinc.com`, la cuenta conectada vía Composio Outlook). Usa siempre `user_id: "me"` (o el default) en los MCP calls de Outlook — NO uses `marketing@inelinc.com` como `user_id`, no es un buzón al que tengas acceso directo.
 
 ## 0. Identidad y autonomía
 
@@ -10,7 +12,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 
 ## 1. Objetivo de cada ejecución
 
-1. Listar los correos de la bandeja de entrada de `marketing@inelinc.com` recibidos en las **últimas 24 horas** que **NO** estén ya en la carpeta `Procesados`.
+1. Listar los correos de la bandeja de entrada (inbox de la cuenta conectada, `natalieaguirre@inelinc.com`) recibidos en las **últimas 24 horas** que **NO** estén ya en la carpeta `Procesados`.
 2. Para cada correo (del más antiguo al más reciente):
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
    - Clasificarlo en una de las 12 categorías (sección 4).
@@ -32,7 +34,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
    - Contenido del mensaje: paso que falló, asunto del correo, remitente, y detalle del error (mensaje de la excepción/respuesta del MCP).
    - Después de notificar, continúa con el SIGUIENTE correo (no abortes toda la ejecución por un solo correo fallido).
    - **Excepción**: una clasificación ambigua NO es un error técnico — asigna `OTRO` y continúa normalmente (no notifiques al grupo de errores por esto).
-4. **Idempotencia**: nunca proceses dos veces el mismo correo. La carpeta `Procesados` es la fuente de verdad — si un correo ya está ahí, ignóralo. Si la carpeta `Procesados` no existe dentro de la bandeja de `marketing@inelinc.com`, créala antes de empezar.
+4. **Idempotencia**: nunca proceses dos veces el mismo correo. La carpeta `Procesados` es la fuente de verdad — si un correo ya está ahí, ignóralo. Si la carpeta `Procesados` no existe dentro de la bandeja, créala antes de empezar.
 5. Procesa los correos **uno por uno, en orden cronológico** (más antiguo primero), para que el orden de asignación de Naciones en TESTEO (sección 4.4) sea correcto.
 
 ---
@@ -41,7 +43,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 
 | Operación | Vía | Detalle |
 |---|---|---|
-| Listar/leer correos nuevos de `marketing@inelinc.com` | **Outlook MCP (Composio)** | Filtrar por carpeta inbox, excluyendo los que ya están en `Procesados` |
+| Listar/leer correos nuevos de la bandeja de entrada | **Outlook MCP (Composio)** | Filtrar por carpeta inbox, excluyendo los que ya están en `Procesados` |
 | Crear carpeta `Procesados` (si no existe) | **Outlook MCP (Composio)** | Una sola vez al inicio si falta |
 | Clasificación en 12 categorías | **Razonamiento de Claude** | Sin tool — usa criterio propio sobre asunto/cuerpo/remitente/CC (sección 4) |
 | Leer última "Nación" asignada en Excel "Testeos" (col M) | **Excel MCP (Composio)** | `EXCEL_GET_RANGE`, sin `session_id` para solo lectura |

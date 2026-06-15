@@ -2,7 +2,7 @@
 
 Routine de Claude Code que corre periódicamente y:
 
-1. Revisa los correos nuevos de `marketing@inelinc.com`.
+1. Revisa los correos nuevos de la bandeja de entrada de Natalie Aguirre (`natalieaguirre@inelinc.com`), donde llegan también los correos enviados al alias `marketing@inelinc.com`.
 2. Clasifica cada uno en una de 12 categorías (PROGRAMA_SYNC, MASTERCLASS, WEBINAR, TESTEO, CORPORATIVO, ASYNC_CURSO, INEL_CORP_GRID, CONTENT_INEL, RP, INEL_NOVA_EVENTOS, DISEÑO_CUSTOM, PROVEEDOR_ADMIN_EXTERNO, OTRO).
 3. Envía un mensaje resumen al grupo o persona de Microsoft Teams correspondiente.
 4. Para correos de TESTEO, calcula y registra la "Nación" (TIERRA/AGUA/FUEGO) que le toca por turno en el Excel de Testeos.
@@ -15,7 +15,7 @@ Toda la lógica detallada está en [`CLAUDE.md`](./CLAUDE.md) — esas son las i
 
 - No requiere instalación de dependencias (`requirements.txt` vacío, `setup.sh` no hace nada).
 - No requiere variables de entorno (`.env.example`).
-- Requiere 3 connectors de Composio activos: **Outlook**, **Microsoft Teams**, **Excel** (todos sobre la cuenta de Microsoft de Natalie Aguirre / `marketing@inelinc.com`).
+- Requiere 3 connectors de Composio activos: **Outlook**, **Microsoft Teams**, **Excel** (todos sobre la cuenta de Microsoft de Natalie Aguirre, `natalieaguirre@inelinc.com`).
 
 ## Cómo desplegarlo
 
