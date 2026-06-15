@@ -103,13 +103,13 @@ Cuando un correo se clasifica como `TESTEO`:
    - `drive_id`: `b!1U4iaBDsVk2MoPFpxkox96PVSF7eIfZPn1_TQQsa_Rux7EmX3JabSbzUbWh20VZS`
    - `worksheet_id`: `Testeos` (id `{78288797-B1BC-4310-BB82-3AAF7F9150E5}`)
    - Lee desde `M6` hasta la última fila con datos (usa `EXCEL_GET_WORKSHEET_USED_RANGE` o un rango amplio como `M6:M200` y descarta vacíos).
-2. Encuentra el valor **no vacío más reciente** (última fila con dato) en esa columna. Debe ser uno de: `NACIÓN TIERRA`, `NACIÓN AGUA`, `NACIÓN FUEGO`.
-   - Si la columna está completamente vacía (ningún valor "NACIÓN X" todavía), asume que el ciclo arranca en `NACIÓN TIERRA` y la siguiente asignación es `NACIÓN AGUA`.
+2. Encuentra el valor **no vacío más reciente** (última fila con dato) en esa columna. Debe ser uno de: `Nacion Tierra`, `Nacion Agua`, `Nacion Fuego` (sin tilde — este es el formato exacto usado en la hoja; ignora mayúsculas/minúsculas y espacios extra al comparar, pero al escribir usa exactamente este formato).
+   - Si la columna está completamente vacía (ningún valor "Nacion X" todavía), asume que el ciclo arranca en `Nacion Tierra` y la siguiente asignación es `Nacion Agua`.
 3. Calcula la **siguiente** Nación en el ciclo (NO incluye AIRE):
-   - `NACIÓN TIERRA` → siguiente = `NACIÓN AGUA`
-   - `NACIÓN AGUA` → siguiente = `NACIÓN FUEGO`
-   - `NACIÓN FUEGO` → siguiente = `NACIÓN TIERRA`
-4. Escribe el valor de la Nación calculada en la **siguiente fila vacía** de la columna M (misma fila donde correspondería registrar este nuevo testeo), usando `EXCEL_GET_SESSION` → `EXCEL_UPDATE_RANGE` → `EXCEL_CLOSE_SESSION`. Usa el string literal exacto (`"NACIÓN TIERRA"`, `"NACIÓN AGUA"` o `"NACIÓN FUEGO"`).
+   - `Nacion Tierra` → siguiente = `Nacion Agua`
+   - `Nacion Agua` → siguiente = `Nacion Fuego`
+   - `Nacion Fuego` → siguiente = `Nacion Tierra`
+4. Escribe el valor de la Nación calculada en la **siguiente fila vacía** de la columna M (misma fila donde correspondería registrar este nuevo testeo), usando `EXCEL_GET_SESSION` → `EXCEL_UPDATE_RANGE` → `EXCEL_CLOSE_SESSION`. Usa el string literal exacto (`"Nacion Tierra"`, `"Nacion Agua"` o `"Nacion Fuego"`, sin tilde).
 5. Envía el mensaje de Teams al chat de la Nación calculada (tabla de Naciones, sección 5).
 
 ### 4.5 CONTENT_INEL
