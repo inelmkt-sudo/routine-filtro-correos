@@ -17,11 +17,11 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
    - Clasificarlo en una de las 12 categorías (sección 4).
    - Determinar el destino en Microsoft Teams según la tabla de ruteo (sección 5): un grupo, un DM, o ningún destino (PROVEEDOR_ADMIN_EXTERNO/OTRO).
-   - Si corresponde, enviar el mensaje formateado a ese destino (sección 6). Si no corresponde (PROVEEDOR_ADMIN_EXTERNO/OTRO), omitir este paso.
-   - Mover el correo a la carpeta `Procesados` (crearla si no existe).
+   - **Si la categoría es PROVEEDOR_ADMIN_EXTERNO u OTRO**: no hagas nada más con este correo — no envíes mensaje a Teams, no lo muevas a `Procesados`, déjalo intacto en el inbox. Solo anótalo para el resumen final (paso 3) y continúa con el siguiente correo.
+   - Para cualquier otra categoría: enviar el mensaje formateado a ese destino (sección 6), y luego mover el correo a la carpeta `Procesados` (crearla si no existe).
 3. Reportar al final un resumen: cuántos correos se procesaron, a qué categoría/destino fue cada uno.
 
-**Éxito** = todos los correos pendientes fueron clasificados, enrutados a Teams y movidos a `Procesados`, sin errores técnicos. Si no hay correos pendientes, termina con `exit 0` y reporta "sin novedades".
+**Éxito** = todos los correos pendientes fueron clasificados y, según corresponda, enrutados a Teams y movidos a `Procesados` (excepto PROVEEDOR_ADMIN_EXTERNO/OTRO, que se dejan intactos), sin errores técnicos. Si no hay correos pendientes, termina con `exit 0` y reporta "sin novedades".
 
 ---
 
@@ -119,7 +119,7 @@ Va **directo a NACIÓN AGUA**.
 ### 4.6 RP, PROVEEDOR_ADMIN_EXTERNO, OTRO
 
 - **RP**: envía el mensaje al **DM de Renato Burneo en Microsoft Teams** (chat ID en sección 5).
-- **PROVEEDOR_ADMIN_EXTERNO** y **OTRO**: **no se reenvían ni notifican a nadie**, por privacidad. Simplemente clasifícalos (para el resumen final) y muévelos a `Procesados` sin enviar ningún mensaje a Teams ni email.
+- **PROVEEDOR_ADMIN_EXTERNO** y **OTRO**: por privacidad, **no se hace absolutamente nada** con estos correos — no se envía mensaje a Teams, no se reenvían, y **no se mueven a `Procesados`** (quedan tal cual en el inbox). Solo se cuentan en el resumen final (sección 1, paso 3).
 
 ### 4.7 DISEÑO_CUSTOM
 
