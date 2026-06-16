@@ -12,7 +12,14 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 
 ## 1. Objetivo de cada ejecución
 
-1. Listar los correos de la bandeja de entrada (inbox de la cuenta conectada, `natalieaguirre@inelinc.com`) recibidos en las **últimas 24 horas** que **NO** estén ya en la carpeta `Procesados`, **Y que además tengan `marketing@inelinc.com` como destinatario (To) o en copia (CC)**. Cualquier correo de las últimas 24h que NO incluya `marketing@inelinc.com` en To/CC se ignora por completo (no se clasifica, no se enruta, no se mueve — es correo personal de Natalie y no debe procesarse).
+1. Buscar los correos con `marketing@inelinc.com` en To o CC, recibidos en las **últimas 24 horas**, que **NO** estén ya en la carpeta `Procesados`. Usa `OUTLOOK_SEARCH_MESSAGES` con la siguiente KQL:
+   ```
+   (to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<FECHA_HACE_24H>
+   ```
+   donde `<FECHA_HACE_24H>` es el timestamp ISO 8601 de hace 24 horas (ej. `2026-06-15T00:00:00Z`).
+   - **NO uses `OUTLOOK_QUERY_EMAILS` ni leas el inbox completo** — solo `OUTLOOK_SEARCH_MESSAGES` con esa KQL garantiza el filtro por To/CC.
+   - Cualquier correo que NO incluya `marketing@inelinc.com` en To/CC se ignora por completo (no se clasifica, no se enruta, no se mueve — es correo personal de Natalie).
+   - Tras obtener los resultados, descarta los que ya estén en la carpeta `Procesados` (verifica por `parentFolderId` o por el asunto/ID contra los ya procesados).
 2. Para cada correo (del más antiguo al más reciente):
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
    - Clasificarlo en una de las 12 categorías (sección 4).
@@ -43,7 +50,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 
 | Operación | Vía | Detalle |
 |---|---|---|
-| Listar/leer correos nuevos de la bandeja de entrada | **Outlook MCP (Composio)** | Filtrar por carpeta inbox, excluyendo los que ya están en `Procesados` |
+| Buscar correos con `marketing@inelinc.com` en To/CC (últimas 24h) | **Outlook MCP (Composio)** | `OUTLOOK_SEARCH_MESSAGES` con KQL `(to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<hace_24h>` — NO usar OUTLOOK_QUERY_EMAILS |
 | Crear carpeta `Procesados` (si no existe) | **Outlook MCP (Composio)** | Una sola vez al inicio si falta |
 | Clasificación en 12 categorías | **Razonamiento de Claude** | Sin tool — usa criterio propio sobre asunto/cuerpo/remitente/CC (sección 4) |
 | Leer última "Nación" asignada en Excel "Testeos" (col M) | **Excel MCP (Composio)** | `EXCEL_GET_RANGE`, sin `session_id` para solo lectura |
