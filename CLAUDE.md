@@ -58,7 +58,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
    - Después de notificar, continúa con el SIGUIENTE correo (no abortes toda la ejecución por un solo correo fallido).
    - **Excepción**: una clasificación ambigua NO es un error técnico — asigna `OTRO` y continúa normalmente (no notifiques al grupo de errores por esto).
 4. **Idempotencia**: el Routine corre 1 vez al día. La ventana de 24h es suficiente para no reprocesar correos. **No uses ni crees la carpeta `Procesados`** — los correos no se mueven.
-5. Procesa los correos **uno por uno, en orden cronológico** (más antiguo primero), para que el orden de asignación de Naciones en TESTEO (sección 4.4) sea correcto.
+5. Procesa los correos **uno por uno, en orden cronológico** (más antiguo primero), para que el orden de asignación de Naciones en la lógica round-robin (sección 4.4) sea correcto.
 
 ---
 
@@ -85,7 +85,7 @@ Clasifica cada correo usando asunto, cuerpo, remitente y CC. Si después de leer
 1. **PROGRAMA_SYNC** — Solicitudes/avisos relacionados con programas síncronos (cursos en vivo, programas con sesiones programadas en tiempo real con instructor).
 2. **MASTERCLASS** — Solicitudes/avisos relacionados con masterclasses.
 3. **WEBINAR** — Solicitudes/avisos relacionados con webinars.
-4. **TESTEO** — Solicitudes para testear/probar un producto o programa antes de su lanzamiento (testeos de programas).
+4. **TESTEO** — Solicitudes para testear/probar un producto o programa antes de su lanzamiento (testeos de programas). El código del producto suele tener prefijo distinto a `CG.` o `CO.`.
 5. **CORPORATIVO** — Comunicados institucionales oficiales dirigidos explícitamente a `marketing@inelinc.com` como área (anuncios de la empresa, políticas internas, comunicados de gerencia/dirección dirigidos a todas las áreas o a marketing como área). **NO uses esta categoría solo porque el tema "suena importante" o porque mencione reestructuración, finanzas, BESS, portafolio u otros temas internos de gestión que no son del área de marketing** — esos casos van a `OTRO` (y no se reenvían a nadie, ver 4.6). Reserva `CORPORATIVO` para cuando sea evidente que es un comunicado institucional formal destinado al área de marketing.
 6. **ASYNC_CURSO** — Cursos o programas asíncronos (sin sesiones en vivo).
 7. **INEL_CORP_GRID** — Asuntos relacionados con Inel Grid (energía / grid) a nivel corporativo.
@@ -117,9 +117,16 @@ Estas tres categorías van **directo a NACIÓN AIRE**, sin necesidad de identifi
 
 Ambas van **directo a NACIÓN TIERRA**. Adicionalmente, `CORPORATIVO` también debe notificar al grupo "general" de errores (mismo chat de la sección 2 regla #3) — esta notificación es informativa, NO es un error: envíale un mensaje breve indicando que llegó un correo CORPORATIVO y a quién se enrutó.
 
-### 4.4 TESTEO — lógica de asignación de Nación (round-robin)
+### 4.4 TESTEO / Curso Gratuito (CG) / Curso Corporativo (CO) — lógica de asignación de Nación (round-robin)
 
-Cuando un correo se clasifica como `TESTEO`:
+**Identifica si el correo pertenece a alguno de estos tres tipos** revisando el asunto, cuerpo y código del producto:
+- **TESTEO**: correo de testeo/prueba de producto (asunto contiene "TESTEO", "testeo", "[TESTEO]", etc.)
+- **Curso Gratuito (CG)**: el código del producto en el asunto/cuerpo empieza con `CG.` (ej. `CG.EI.05-26.1`)
+- **Curso Corporativo (CO)**: el código del producto empieza con `CO.` (ej. `CO.XX.XX-XX.X`)
+
+Los tres tipos comparten el **mismo turno rotativo** en la columna M del Excel. Cuando un correo es de cualquiera de estos tres tipos:
+
+Cuando un correo es TESTEO, CG o CO:
 
 1. Vía Excel MCP, lee la columna M ("Nación") de la hoja `Testeos` del archivo "REGISTRAR PROGRAMAS WORKSHOPS.xlsx":
    - `item_id`: `5EEF575E-8A7D-4113-A6D1-8960A783CA00`
@@ -176,7 +183,7 @@ Va **directo a POD 3**.
 | PROGRAMA_SYNC | Nación según equipo comercial (4.1) |
 | MASTERCLASS | Nación según equipo comercial (4.1) |
 | WEBINAR | NACIÓN AIRE |
-| TESTEO | Nación calculada por round-robin (4.4) |
+| TESTEO / CG / CO | Nación calculada por round-robin (4.4) — turno compartido |
 | CORPORATIVO | NACIÓN TIERRA + aviso a grupo "general" |
 | ASYNC_CURSO | NACIÓN AIRE |
 | INEL_CORP_GRID | NACIÓN TIERRA |
