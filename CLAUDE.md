@@ -21,9 +21,8 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 
    Tras obtener los resultados, aplica estos filtros **en orden** y descarta el correo si cualquiera se cumple:
 
-   a) **Carpeta**: el `parentFolderId` del correo NO corresponde al inbox (`inbox`). Si el correo ya fue movido a otra carpeta (OTI, Newsletters, etc.) por reglas de Outlook, ignóralo por completo — no lo toques ni lo muevas.
-   b) **Procesados**: el correo ya está en la carpeta `Procesados`.
-   c) **Remitente interno de marketing**: el campo `from` pertenece a uno de los siguientes miembros del equipo de marketing — ignora el correo por completo (ellos ya saben de lo que escriben):
+   a) **Carpeta**: el `parentFolderId` del correo NO corresponde al inbox. Si el correo ya fue movido a otra carpeta (OTI, Newsletters, etc.) por reglas de Outlook, ignóralo — **no lo toques ni lo muevas**.
+   b) **Remitente interno de marketing**: el campo `from` pertenece a uno de los siguientes miembros del equipo de marketing — ignóralo por completo (ellos ya saben de lo que escriben):
       - `cesartorres@inelinc.com`
       - `sofiavillarruel@inelinc.com`
       - `michaelmerello@inelinc.com`
@@ -34,16 +33,18 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
       - `pod2@inelinc.com`
       - `natalieaguirre@inelinc.com` (la propia cuenta conectada)
 
-   Solo los correos que pasen los tres filtros anteriores se procesan.
+   Solo los correos que pasen los dos filtros anteriores se procesan.
 2. Para cada correo (del más antiguo al más reciente):
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
    - Clasificarlo en una de las 12 categorías (sección 4).
    - Determinar el destino en Microsoft Teams según la tabla de ruteo (sección 5): un grupo, un DM, o ningún destino (PROVEEDOR_ADMIN_EXTERNO/OTRO).
-   - **Si la categoría es PROVEEDOR_ADMIN_EXTERNO u OTRO**: no hagas nada más con este correo — no envíes mensaje a Teams, no lo muevas a `Procesados`, déjalo intacto en el inbox. Solo anótalo para el resumen final (paso 3) y continúa con el siguiente correo.
-   - Para cualquier otra categoría: enviar el mensaje formateado a ese destino (sección 6), y luego mover el correo a la carpeta `Procesados` (crearla si no existe).
+   - **No muevas ningún correo, no marques como leído, no modifiques nada en Outlook.** El correo queda exactamente donde está para que Natalie lo revise con detenimiento.
+   - Si la categoría corresponde (ver sección 5): enviar el mensaje formateado a Teams/DM (sección 6). Si es PROVEEDOR_ADMIN_EXTERNO u OTRO: no hacer nada, solo anotarlo para el resumen.
 3. Reportar al final un resumen: cuántos correos se procesaron, a qué categoría/destino fue cada uno.
 
-**Éxito** = todos los correos pendientes fueron clasificados y, según corresponda, enrutados a Teams y movidos a `Procesados` (excepto PROVEEDOR_ADMIN_EXTERNO/OTRO, que se dejan intactos), sin errores técnicos. Si no hay correos pendientes, termina con `exit 0` y reporta "sin novedades".
+**Éxito** = todos los correos pendientes fueron clasificados y notificados a Teams según corresponda, **sin tocar ni mover ningún correo en Outlook**, sin errores técnicos. Si no hay correos pendientes, termina con `exit 0` y reporta "sin novedades".
+
+**Idempotencia**: el Routine corre 1 vez al día — la ventana de 24h garantiza que cada correo se procesa solo una vez. No se necesita carpeta `Procesados`.
 
 ---
 
@@ -56,7 +57,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
    - Contenido del mensaje: paso que falló, asunto del correo, remitente, y detalle del error (mensaje de la excepción/respuesta del MCP).
    - Después de notificar, continúa con el SIGUIENTE correo (no abortes toda la ejecución por un solo correo fallido).
    - **Excepción**: una clasificación ambigua NO es un error técnico — asigna `OTRO` y continúa normalmente (no notifiques al grupo de errores por esto).
-4. **Idempotencia**: nunca proceses dos veces el mismo correo. La carpeta `Procesados` es la fuente de verdad — si un correo ya está ahí, ignóralo. Si la carpeta `Procesados` no existe dentro de la bandeja, créala antes de empezar.
+4. **Idempotencia**: el Routine corre 1 vez al día. La ventana de 24h es suficiente para no reprocesar correos. **No uses ni crees la carpeta `Procesados`** — los correos no se mueven.
 5. Procesa los correos **uno por uno, en orden cronológico** (más antiguo primero), para que el orden de asignación de Naciones en TESTEO (sección 4.4) sea correcto.
 
 ---
@@ -66,12 +67,12 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 | Operación | Vía | Detalle |
 |---|---|---|
 | Buscar correos con `marketing@inelinc.com` en To/CC (últimas 24h) | **Outlook MCP (Composio)** | `OUTLOOK_SEARCH_MESSAGES` con KQL `(to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<hace_24h>` — NO usar OUTLOOK_QUERY_EMAILS |
-| Crear carpeta `Procesados` (si no existe) | **Outlook MCP (Composio)** | Una sola vez al inicio si falta |
+| ~~Crear carpeta `Procesados`~~ | ~~Outlook MCP~~ | **No aplica** — los correos no se mueven |
 | Clasificación en 12 categorías | **Razonamiento de Claude** | Sin tool — usa criterio propio sobre asunto/cuerpo/remitente/CC (sección 4) |
 | Leer última "Nación" asignada en Excel "Testeos" (col M) | **Excel MCP (Composio)** | `EXCEL_GET_RANGE`, sin `session_id` para solo lectura |
 | Escribir nueva "Nación" en Excel "Testeos" (col M, nueva fila) | **Excel MCP (Composio)** | `EXCEL_GET_SESSION` → `EXCEL_UPDATE_RANGE` → `EXCEL_CLOSE_SESSION` |
 | Enviar mensaje a Microsoft Teams (grupo o DM) | **Teams MCP (Composio)** | `MICROSOFT_TEAMS_*` para enviar mensaje al chat correspondiente (no aplica a PROVEEDOR_ADMIN_EXTERNO/OTRO) |
-| Mover correo procesado a `Procesados` | **Outlook MCP (Composio)** | Mover, no copiar |
+| ~~Mover correo a `Procesados`~~ | ~~Outlook MCP~~ | **No aplica** — los correos quedan intactos |
 
 No hay scripts de Python — todas las operaciones tienen MCP remoto disponible y conectado.
 
