@@ -12,14 +12,29 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 
 ## 1. Objetivo de cada ejecución
 
-1. Buscar los correos con `marketing@inelinc.com` en To o CC, recibidos en las **últimas 24 horas**, que **NO** estén ya en la carpeta `Procesados`. Usa `OUTLOOK_SEARCH_MESSAGES` con la siguiente KQL:
+1. Buscar los correos con `marketing@inelinc.com` en To o CC, recibidos en las **últimas 24 horas**. Usa `OUTLOOK_SEARCH_MESSAGES` con la siguiente KQL:
    ```
    (to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<FECHA_HACE_24H>
    ```
    donde `<FECHA_HACE_24H>` es el timestamp ISO 8601 de hace 24 horas (ej. `2026-06-15T00:00:00Z`).
    - **NO uses `OUTLOOK_QUERY_EMAILS` ni leas el inbox completo** — solo `OUTLOOK_SEARCH_MESSAGES` con esa KQL garantiza el filtro por To/CC.
-   - Cualquier correo que NO incluya `marketing@inelinc.com` en To/CC se ignora por completo (no se clasifica, no se enruta, no se mueve — es correo personal de Natalie).
-   - Tras obtener los resultados, descarta los que ya estén en la carpeta `Procesados` (verifica por `parentFolderId` o por el asunto/ID contra los ya procesados).
+
+   Tras obtener los resultados, aplica estos filtros **en orden** y descarta el correo si cualquiera se cumple:
+
+   a) **Carpeta**: el `parentFolderId` del correo NO corresponde al inbox (`inbox`). Si el correo ya fue movido a otra carpeta (OTI, Newsletters, etc.) por reglas de Outlook, ignóralo por completo — no lo toques ni lo muevas.
+   b) **Procesados**: el correo ya está en la carpeta `Procesados`.
+   c) **Remitente interno de marketing**: el campo `from` pertenece a uno de los siguientes miembros del equipo de marketing — ignora el correo por completo (ellos ya saben de lo que escriben):
+      - `cesartorres@inelinc.com`
+      - `sofiavillarruel@inelinc.com`
+      - `michaelmerello@inelinc.com`
+      - `alexisalfaro@inelinc.com`
+      - `renatoburneo@inelinc.com`
+      - `sauloordonez@inelinc.com`
+      - `gerarpariona@inelinc.com`
+      - `pod2@inelinc.com`
+      - `natalieaguirre@inelinc.com` (la propia cuenta conectada)
+
+   Solo los correos que pasen los tres filtros anteriores se procesan.
 2. Para cada correo (del más antiguo al más reciente):
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
    - Clasificarlo en una de las 12 categorías (sección 4).
