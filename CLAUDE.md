@@ -70,7 +70,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 | ~~Crear carpeta `Procesados`~~ | ~~Outlook MCP~~ | **No aplica** — los correos no se mueven |
 | Clasificación en 12 categorías | **Razonamiento de Claude** | Sin tool — usa criterio propio sobre asunto/cuerpo/remitente/CC (sección 4) |
 | Leer última "Nación" asignada en Excel "Testeos" (col M) | **Excel MCP (Composio)** | `EXCEL_GET_RANGE`, sin `session_id` para solo lectura |
-| Escribir nueva "Nación" en Excel "Testeos" (col M, nueva fila) | **Excel MCP (Composio)** | `EXCEL_GET_SESSION` → `EXCEL_UPDATE_RANGE` → `EXCEL_CLOSE_SESSION` |
+| Escribir nueva "Nación" en Excel "Testeos" (col M, nueva fila) | **Excel MCP (Composio)** | `EXCEL_UPDATE_RANGE` directamente (sin sesión) — usa `item_id` + `drive_id` + `worksheet_id` + `address` |
 | Enviar mensaje a Microsoft Teams (grupo o DM) | **Teams MCP (Composio)** | `MICROSOFT_TEAMS_*` para enviar mensaje al chat correspondiente (no aplica a PROVEEDOR_ADMIN_EXTERNO/OTRO) |
 | ~~Mover correo a `Procesados`~~ | ~~Outlook MCP~~ | **No aplica** — los correos quedan intactos |
 
@@ -132,7 +132,7 @@ Cuando un correo se clasifica como `TESTEO`:
    - `Nacion Tierra` → siguiente = `Nacion Agua`
    - `Nacion Agua` → siguiente = `Nacion Fuego`
    - `Nacion Fuego` → siguiente = `Nacion Tierra`
-4. Escribe el valor de la Nación calculada en la **siguiente fila vacía** de la columna M (misma fila donde correspondería registrar este nuevo testeo), usando `EXCEL_GET_SESSION` → `EXCEL_UPDATE_RANGE` → `EXCEL_CLOSE_SESSION`. Usa el string literal exacto (`"Nacion Tierra"`, `"Nacion Agua"` o `"Nacion Fuego"`, sin tilde).
+4. Escribe el valor de la Nación calculada en la **siguiente fila vacía** de la columna M usando `EXCEL_UPDATE_RANGE` directamente (sin sesión). Usa el string literal exacto (`"Nacion Tierra"`, `"Nacion Agua"` o `"Nacion Fuego"`, sin tilde).
 5. Envía el mensaje de Teams al chat de la Nación calculada (tabla de Naciones, sección 5).
 
 ### 4.5 CONTENT_INEL
