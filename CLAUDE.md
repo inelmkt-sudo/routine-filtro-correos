@@ -21,7 +21,7 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 
    Tras obtener los resultados, aplica estos filtros **en orden** y descarta el correo si cualquiera se cumple:
 
-   a) **Carpeta**: el `parentFolderId` del correo NO corresponde al inbox. Si el correo ya fue movido a otra carpeta (OTI, Newsletters, etc.) por reglas de Outlook, ignóralo — **no lo toques ni lo muevas**.
+   a) **Carpeta**: el `parentFolderId` del correo NO corresponde al inbox. Si el correo ya fue movido a otra carpeta (OTI, Newsletters, Procesados, etc.) por reglas de Outlook o por ejecuciones anteriores, ignóralo — **no lo toques ni lo muevas**.
    b) **Remitente interno de marketing**: el campo `from` pertenece a uno de los siguientes miembros del equipo de marketing — ignóralo por completo (ellos ya saben de lo que escriben):
       - `cesartorres@inelinc.com`
       - `sofiavillarruel@inelinc.com`
@@ -38,13 +38,16 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
    - Clasificarlo en una de las 12 categorías (sección 4).
    - Determinar el destino en Microsoft Teams según la tabla de ruteo (sección 5): un grupo, un DM, o ningún destino (PROVEEDOR_ADMIN_EXTERNO/OTRO).
-   - **No muevas ningún correo, no marques como leído, no modifiques nada en Outlook.** El correo queda exactamente donde está para que Natalie lo revise con detenimiento.
-   - Si la categoría corresponde (ver sección 5): enviar el mensaje formateado a Teams/DM (sección 6). Si es PROVEEDOR_ADMIN_EXTERNO u OTRO: no hacer nada, solo anotarlo para el resumen.
+   - **No marques como leído** el correo — Natalie los revisa con detenimiento.
+   - Si la categoría corresponde (ver sección 5): enviar el mensaje formateado a Teams/DM (sección 6).
+     - Si el envío a Teams **fue exitoso**: mover el correo a la carpeta `Procesados` de Outlook (crearla si no existe).
+     - Si el envío a Teams **falló** (error técnico): **NO mover** el correo — notificar al grupo de errores (sección 2 regla #3) y continuar con el siguiente.
+   - Si es PROVEEDOR_ADMIN_EXTERNO u OTRO: **no hacer nada** (sin Teams, sin mover) — solo anotarlo para el resumen.
 3. Reportar al final un resumen: cuántos correos se procesaron, a qué categoría/destino fue cada uno.
 
-**Éxito** = todos los correos pendientes fueron clasificados y notificados a Teams según corresponda, **sin tocar ni mover ningún correo en Outlook**, sin errores técnicos. Si no hay correos pendientes, termina con `exit 0` y reporta "sin novedades".
+**Éxito** = todos los correos pendientes fueron clasificados y notificados a Teams según corresponda, con los exitosos movidos a `Procesados`, sin errores técnicos. Si no hay correos pendientes, termina con `exit 0` y reporta "sin novedades".
 
-**Idempotencia**: el Routine corre 1 vez al día — la ventana de 24h garantiza que cada correo se procesa solo una vez. No se necesita carpeta `Procesados`.
+**Idempotencia**: el Routine corre 1 vez al día. Los correos ya procesados quedan en la carpeta `Procesados`, que el filtro 1a excluye automáticamente — nunca se reprocesa el mismo correo.
 
 ---
 
@@ -56,8 +59,9 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
    - Chat ID: `19:7ae5575d52c04e6c937c2e694a86e760@thread.v2` ("POD'S Operaciones (Nadie habla)")
    - Contenido del mensaje: paso que falló, asunto del correo, remitente, y detalle del error (mensaje de la excepción/respuesta del MCP).
    - Después de notificar, continúa con el SIGUIENTE correo (no abortes toda la ejecución por un solo correo fallido).
+   - **El correo que falló NO se mueve a `Procesados`** — queda en inbox para que sea reintentado en la próxima ejecución.
    - **Excepción**: una clasificación ambigua NO es un error técnico — asigna `OTRO` y continúa normalmente (no notifiques al grupo de errores por esto).
-4. **Idempotencia**: el Routine corre 1 vez al día. La ventana de 24h es suficiente para no reprocesar correos. **No uses ni crees la carpeta `Procesados`** — los correos no se mueven.
+4. **Idempotencia**: los correos procesados quedan en `Procesados` y el filtro de carpeta (1a) los excluye. Solo se procesan correos que estén en el inbox.
 5. Procesa los correos **uno por uno, en orden cronológico** (más antiguo primero), para que el orden de asignación de Naciones en la lógica round-robin (sección 4.4) sea correcto.
 
 ---
@@ -67,12 +71,12 @@ Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurs
 | Operación | Vía | Detalle |
 |---|---|---|
 | Buscar correos con `marketing@inelinc.com` en To/CC (últimas 24h) | **Outlook MCP (Composio)** | `OUTLOOK_SEARCH_MESSAGES` con KQL `(to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<hace_24h>` — NO usar OUTLOOK_QUERY_EMAILS |
-| ~~Crear carpeta `Procesados`~~ | ~~Outlook MCP~~ | **No aplica** — los correos no se mueven |
+| Crear carpeta `Procesados` (si no existe) | **Outlook MCP (Composio)** | Crear subcarpeta de inbox llamada `Procesados` |
 | Clasificación en 12 categorías | **Razonamiento de Claude** | Sin tool — usa criterio propio sobre asunto/cuerpo/remitente/CC (sección 4) |
 | Leer última "Nación" asignada en Excel "Testeos" (col M) | **Excel MCP (Composio)** | `EXCEL_GET_RANGE`, sin `session_id` para solo lectura |
 | Escribir nueva "Nación" en Excel "Testeos" (col M, nueva fila) | **Excel MCP (Composio)** | `EXCEL_UPDATE_RANGE` directamente (sin sesión) — usa `item_id` + `drive_id` + `worksheet_id` + `address` |
 | Enviar mensaje a Microsoft Teams (grupo o DM) | **Teams MCP (Composio)** | `MICROSOFT_TEAMS_*` para enviar mensaje al chat correspondiente (no aplica a PROVEEDOR_ADMIN_EXTERNO/OTRO) |
-| ~~Mover correo a `Procesados`~~ | ~~Outlook MCP~~ | **No aplica** — los correos quedan intactos |
+| Mover correo a `Procesados` (solo si Teams fue exitoso) | **Outlook MCP (Composio)** | Mover a la carpeta `Procesados` — NO mover si Teams falló |
 
 No hay scripts de Python — todas las operaciones tienen MCP remoto disponible y conectado.
 
@@ -119,22 +123,28 @@ Ambas van **directo a NACIÓN TIERRA**. Adicionalmente, `CORPORATIVO` también d
 
 ### 4.4 TESTEO / Curso Gratuito (CG) / Curso Corporativo (CO) — lógica de asignación de Nación (round-robin)
 
-**Identifica si el correo pertenece a alguno de estos tres tipos** revisando el asunto, cuerpo y código del producto:
-- **TESTEO**: correo de testeo/prueba de producto (asunto contiene "TESTEO", "testeo", "[TESTEO]", etc.)
-- **Curso Gratuito (CG)**: el código del producto en el asunto/cuerpo empieza con `CG.` (ej. `CG.EI.05-26.1`)
-- **Curso Corporativo (CO)**: el código del producto empieza con `CO.` (ej. `CO.XX.XX-XX.X`)
+**Identifica si el correo pertenece a alguno de estos tres tipos** revisando asunto, cuerpo y código del producto. Aplica cualquiera de estos criterios:
 
-Los tres tipos comparten el **mismo turno rotativo** en la columna M del Excel. Cuando un correo es de cualquiera de estos tres tipos:
+- **TESTEO**: el asunto (ignorando corchetes y mayúsculas/minúsculas) **empieza con** `TESTEO` — ej. `TESTEO: ...`, `[TESTEO] ...`, `[TESTEO: nombre]`. También si el cuerpo describe claramente un testeo/prueba de producto sin código CG./CO.
+- **Curso Gratuito (CG)**: el código del producto en el asunto/cuerpo **empieza con** `CG.` (ej. `CG.EI.05-26.1`). También si el asunto (ignorando corchetes) **empieza con** `NUEVO CURSO` o `NUEVO PROGRAMA` — ej. `[NUEVO CURSO] ...`, `NUEVO PROGRAMA - ...`.
+- **Curso Corporativo (CO)**: el código del producto empieza con `CO.` (ej. `CO.XX.XX-XX.X`). También aplica si el asunto (ignorando corchetes) **empieza con** `NUEVO CURSO` o `NUEVO PROGRAMA` y el contexto indica que es corporativo.
 
-Cuando un correo es TESTEO, CG o CO:
+**Regla de patrón de asunto** (detección simplificada): si el asunto del correo, una vez eliminados corchetes y su contenido de los extremos, **empieza con** alguna de estas palabras/frases (sin importar mayúsculas/minúsculas):
+- `NUEVO CURSO`
+- `NUEVO PROGRAMA`
+- `TESTEO`
+
+…entonces el correo entra directamente en la lógica round-robin de esta sección (TESTEO/CG/CO), sin importar si encontraste o no un código explícito. Usa el contexto del cuerpo para distinguir si es CG o CO, pero la clasificación en round-robin es la misma para los tres.
+
+Los tres tipos comparten el **mismo turno rotativo** en la columna M del Excel:
 
 1. Vía Excel MCP, lee la columna M ("Nación") de la hoja `Testeos` del archivo "REGISTRAR PROGRAMAS WORKSHOPS.xlsx":
    - `item_id`: `5EEF575E-8A7D-4113-A6D1-8960A783CA00`
    - `drive_id`: `b!1U4iaBDsVk2MoPFpxkox96PVSF7eIfZPn1_TQQsa_Rux7EmX3JabSbzUbWh20VZS`
    - `worksheet_id`: `Testeos` (id `{78288797-B1BC-4310-BB82-3AAF7F9150E5}`)
-   - Lee desde `M6` hasta la última fila con datos (usa `EXCEL_GET_WORKSHEET_USED_RANGE` o un rango amplio como `M6:M200` y descarta vacíos).
-2. Encuentra el valor **no vacío más reciente** (última fila con dato) en esa columna. Debe ser uno de: `Nacion Tierra`, `Nacion Agua`, `Nacion Fuego` (sin tilde — este es el formato exacto usado en la hoja; ignora mayúsculas/minúsculas y espacios extra al comparar, pero al escribir usa exactamente este formato).
-   - Si la columna está completamente vacía (ningún valor "Nacion X" todavía), asume que el ciclo arranca en `Nacion Tierra` y la siguiente asignación es `Nacion Agua`.
+   - Lee desde `M6` hasta la última fila con datos (usa un rango amplio como `M6:M200` y descarta vacíos).
+2. Encuentra el valor **no vacío más reciente** (última fila con dato) en esa columna. Debe ser uno de: `Nacion Tierra`, `Nacion Agua`, `Nacion Fuego` (sin tilde — formato exacto; ignora mayúsculas/minúsculas y espacios extra al comparar, pero al escribir usa exactamente este formato).
+   - Si la columna está completamente vacía, asume que el ciclo arranca en `Nacion Tierra` y la siguiente asignación es `Nacion Agua`.
 3. Calcula la **siguiente** Nación en el ciclo (NO incluye AIRE):
    - `Nacion Tierra` → siguiente = `Nacion Agua`
    - `Nacion Agua` → siguiente = `Nacion Fuego`
@@ -178,54 +188,69 @@ Va **directo a POD 3**.
 
 ### Resumen final por categoría
 
-| Categoría | Destino |
-|---|---|
-| PROGRAMA_SYNC | Nación según equipo comercial (4.1) |
-| MASTERCLASS | Nación según equipo comercial (4.1) |
-| WEBINAR | NACIÓN AIRE |
-| TESTEO / CG / CO | Nación calculada por round-robin (4.4) — turno compartido |
-| CORPORATIVO | NACIÓN TIERRA + aviso a grupo "general" |
-| ASYNC_CURSO | NACIÓN AIRE |
-| INEL_CORP_GRID | NACIÓN TIERRA |
-| CONTENT_INEL | NACIÓN AGUA |
-| RP | DM Renato Burneo |
-| INEL_NOVA_EVENTOS | NACIÓN AIRE |
-| DISEÑO_CUSTOM | POD 3 |
-| PROVEEDOR_ADMIN_EXTERNO | Ninguno (solo mover a Procesados, sin notificar) |
-| OTRO | Ninguno (solo mover a Procesados, sin notificar) |
+| Categoría | Destino Teams | Mover a Procesados |
+|---|---|---|
+| PROGRAMA_SYNC | Nación según equipo comercial (4.1) | ✅ si envío exitoso |
+| MASTERCLASS | Nación según equipo comercial (4.1) | ✅ si envío exitoso |
+| WEBINAR | NACIÓN AIRE | ✅ si envío exitoso |
+| TESTEO / CG / CO | Nación calculada por round-robin (4.4) | ✅ si envío exitoso |
+| CORPORATIVO | NACIÓN TIERRA + aviso a grupo "general" | ✅ si envío exitoso |
+| ASYNC_CURSO | NACIÓN AIRE | ✅ si envío exitoso |
+| INEL_CORP_GRID | NACIÓN TIERRA | ✅ si envío exitoso |
+| CONTENT_INEL | NACIÓN AGUA | ✅ si envío exitoso |
+| RP | DM Renato Burneo | ✅ si envío exitoso |
+| INEL_NOVA_EVENTOS | NACIÓN AIRE | ✅ si envío exitoso |
+| DISEÑO_CUSTOM | POD 3 | ✅ si envío exitoso |
+| PROVEEDOR_ADMIN_EXTERNO | Ninguno | ❌ nunca |
+| OTRO | Ninguno | ❌ nunca |
 
 ---
 
 ## 6. Formato del mensaje de Teams
 
-Para cada correo procesado, envía un mensaje de Teams con este formato (texto plano, claro y escaneable):
+Usa **viñetas, negritas, emojis y líneas en blanco** entre secciones. No incluyas el campo "De/Remitente" en el mensaje. Estructura clara y escaneable — no texto en bloque.
+
+### Mensaje principal (para el grupo o DM de la Nación/destino)
 
 ```
-📩 Nuevo correo — [CATEGORÍA]
-Asunto: <asunto del correo>
-De: <remitente>
-CC: <lista de CC, o "—" si no hay>
-Resumen: <2-3 líneas resumiendo el contenido relevante del cuerpo, en tus propias palabras>
-[Si aplica] Nación asignada: <NACIÓN X>
+📩 **[CATEGORÍA]** — Nuevo correo
+
+• 📋 **Asunto:** <asunto del correo>
+• 📅 **Recibido:** <fecha y hora de recepción>
+
+• 📝 **Resumen:**
+  <línea 1 del resumen>
+  <línea 2 del resumen>
+  <línea 3 si aplica>
+
+• 🌍 **Nación asignada:** <NACIÓN X>   ← solo si aplica (TESTEO/CG/CO/CORPORATIVO/etc.)
 ```
 
-Para la notificación informativa de `CORPORATIVO` al grupo "general" (sección 4.3), usa:
+Si el correo menciona fechas importantes (inicio de curso, fecha límite, evento, etc.), agrégalas como viñeta adicional:
 
 ```
-ℹ️ Correo CORPORATIVO recibido
-Asunto: <asunto>
-De: <remitente>
-Enrutado a: NACIÓN TIERRA
+• 📆 **Fecha clave:** <fecha mencionada en el correo>
 ```
 
-Para las notificaciones de error (sección 2, regla #3), usa:
+### Notificación informativa de CORPORATIVO al grupo "general" (sección 4.3)
 
 ```
-⚠️ Error procesando correo
-Paso que falló: <paso>
-Asunto: <asunto del correo>
-De: <remitente>
-Detalle del error: <mensaje de error>
+ℹ️ **Correo CORPORATIVO recibido**
+
+• 📋 **Asunto:** <asunto>
+• 📅 **Recibido:** <fecha y hora>
+• 🌍 **Enrutado a:** NACIÓN TIERRA
+```
+
+### Notificaciones de error (sección 2, regla #3)
+
+```
+⚠️ **Error procesando correo**
+
+• 📋 **Asunto:** <asunto del correo>
+• 📅 **Recibido:** <fecha y hora>
+• 🔧 **Paso que falló:** <descripción del paso>
+• ❌ **Detalle del error:** <mensaje de error o respuesta del MCP>
 ```
 
 ---
