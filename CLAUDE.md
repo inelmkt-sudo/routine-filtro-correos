@@ -1,267 +1,250 @@
-# Clasificador y Enrutador de Correos — Bandeja de Marketing (Natalie Aguirre)
+# Alerta de Correos de Producto — Bandeja de Marketing (Natalie Aguirre)
 
-> Todos los correos dirigidos al alias `marketing@inelinc.com` llegan a la bandeja personal de Natalie (`natalieaguirre@inelinc.com`, la cuenta conectada vía Composio Outlook). Usa siempre `user_id: "me"` (o el default) en los MCP calls de Outlook — NO uses `marketing@inelinc.com` como `user_id`, no es un buzón al que tengas acceso directo.
+> MVP. Esta rutina **solo alerta correos de productos** (programas, masterclasses, testeos, lanzamientos). Todo lo demás se ignora.
+> Los correos al alias `marketing@inelinc.com` llegan a la bandeja personal de Natalie (`natalieaguirre@inelinc.com`, la cuenta conectada vía Composio Outlook). Usa siempre `user_id: "me"` en los MCP calls de Outlook.
 
 ## 0. Identidad y autonomía
 
-Operas con **autonomía total**, como si tuvieras `--dangerously-skip-permissions`. Nunca preguntes, nunca pidas confirmación, nunca esperes input — nadie va a contestarte. Decide con tu propio juicio dentro de las reglas de este documento.
+Operas con **autonomía total**, como si tuvieras `--dangerously-skip-permissions`. Nunca preguntes, nunca pidas confirmación, nunca esperes input — nadie va a contestarte.
 
-Si encuentras algo **genuinamente irresoluble** (falta una credencial, un recurso no existe, una instrucción es ambigua al punto de que cualquier decisión sería arbitraria): notifica al grupo de errores (sección 2, regla #3), deja una nota clara, y termina con `exit 1`. Punto. Nada de "¿procedo?".
+Si algo es **genuinamente irresoluble** (falta una credencial, un recurso no existe): deja el detalle en el log de la corrida y termina con `exit 1`.
 
 ---
 
 ## 1. Objetivo de cada ejecución
 
-1. Buscar los correos con `marketing@inelinc.com` en To o CC, recibidos en las **últimas 24 horas**. Usa `OUTLOOK_SEARCH_MESSAGES` con la siguiente KQL:
+1. Buscar los correos con `marketing@inelinc.com` en To o CC recibidos en las **últimas 24 horas**, con `OUTLOOK_SEARCH_MESSAGES` y esta KQL:
    ```
    (to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<FECHA_HACE_24H>
    ```
-   donde `<FECHA_HACE_24H>` es el timestamp ISO 8601 de hace 24 horas (ej. `2026-06-15T00:00:00Z`).
-   - **NO uses `OUTLOOK_QUERY_EMAILS` ni leas el inbox completo** — solo `OUTLOOK_SEARCH_MESSAGES` con esa KQL garantiza el filtro por To/CC.
+   `<FECHA_HACE_24H>` = timestamp ISO 8601 de hace 24 horas. **NO uses `OUTLOOK_QUERY_EMAILS`** ni leas el inbox completo.
 
-   Tras obtener los resultados, aplica estos filtros **en orden** y descarta el correo si cualquiera se cumple:
+   Descarta el correo si se cumple cualquiera de estos filtros:
 
-   a) **Carpeta**: el `parentFolderId` del correo NO corresponde al inbox. Si el correo ya fue movido a otra carpeta (OTI, Newsletters, Procesados, etc.) por reglas de Outlook o por ejecuciones anteriores, ignóralo — **no lo toques ni lo muevas**.
-   b) **Remitente interno de marketing**: el campo `from` pertenece a uno de los siguientes miembros del equipo de marketing — ignóralo por completo (ellos ya saben de lo que escriben):
-      - `cesartorres@inelinc.com`
-      - `sofiavillarruel@inelinc.com`
-      - `michaelmerello@inelinc.com`
-      - `alexisalfaro@inelinc.com`
-      - `renatoburneo@inelinc.com`
-      - `sauloordonez@inelinc.com`
-      - `gerarpariona@inelinc.com`
-      - `pod2@inelinc.com`
-      - `natalieaguirre@inelinc.com` (la propia cuenta conectada)
+   a) **Carpeta**: el `parentFolderId` NO corresponde al inbox (ya fue movido por reglas de Outlook o por una corrida anterior). No lo toques.
+   b) **Remitente interno de marketing** — ellos ya saben de lo que escriben:
+      `cesartorres@inelinc.com`, `sofiavillarruel@inelinc.com`, `michaelmerello@inelinc.com`, `alexisalfaro@inelinc.com`, `renatoburneo@inelinc.com`, `sauloordonez@inelinc.com`, `gerarpariona@inelinc.com`, `pod2@inelinc.com`, `natalieaguirre@inelinc.com`.
 
-   Solo los correos que pasen los dos filtros anteriores se procesan.
-2. Para cada correo (del más antiguo al más reciente):
+2. Para cada correo que pase los filtros, en orden cronológico (más antiguo primero):
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
-   - Clasificarlo en una de las 12 categorías (sección 4).
-   - Determinar el destino en Microsoft Teams según la tabla de ruteo (sección 5): un grupo, un DM, o ningún destino (PROVEEDOR_ADMIN_EXTERNO/OTRO).
-   - **No marques como leído** el correo — Natalie los revisa con detenimiento.
-   - Si la categoría corresponde (ver sección 5): enviar el mensaje formateado a Teams/DM (sección 6).
-     - Si el envío a Teams **fue exitoso**: mover el correo a la carpeta `Procesados` de Outlook (crearla si no existe).
-     - Si el envío a Teams **falló** (error técnico): **NO mover** el correo — notificar al grupo de errores (sección 2 regla #3) y continuar con el siguiente.
-   - Si es PROVEEDOR_ADMIN_EXTERNO u OTRO: **no hacer nada** (sin Teams, sin mover) — solo anotarlo para el resumen.
-3. Reportar al final un resumen: cuántos correos se procesaron, a qué categoría/destino fue cada uno.
+   - Decidir si es **de producto** (sección 3). Si no lo es: no hacer nada, ni alerta ni mover.
+   - Decidir si es **alerta o notificación** (sección 4). Si es notificación: no hacer nada, ni alerta ni mover.
+   - Si es alerta: identificar el producto y sus responsables en el Excel (sección 5), enviar el mensaje a POD'S Operaciones (secciones 6 y 7) y **mover el correo a `Procesados`** solo si el envío fue exitoso.
+   - **No marques como leído** ningún correo — Natalie los revisa con detenimiento.
 
-**Éxito** = todos los correos pendientes fueron clasificados y notificados a Teams según corresponda, con los exitosos movidos a `Procesados`, sin errores técnicos. Si no hay correos pendientes, termina con `exit 0` y reporta "sin novedades".
+**Éxito** = todos los correos de producto que ameritaban alerta fueron notificados y movidos a `Procesados`. Si no hay ninguno, termina con `exit 0`.
 
-**Idempotencia**: el Routine corre 1 vez al día. Los correos ya procesados quedan en la carpeta `Procesados`, que el filtro 1a excluye automáticamente — nunca se reprocesa el mismo correo.
+**Idempotencia**: los correos alertados quedan en `Procesados`, que el filtro 1a excluye. Los ignorados siguen en el inbox, pero como el criterio es determinista y la ventana es de 24h, no generan alertas repetidas.
 
 ---
 
-## 2. Reglas duras (no negociables)
+## 2. Reglas duras
 
-1. **Autonomía total** (ver sección 0).
-2. **Nunca leas ni proceses adjuntos.** Solo asunto, cuerpo, remitente, CC. Si un correo solo tiene adjunto y el cuerpo/asunto no da info suficiente para clasificar, usa lo que haya disponible (asunto + remitente) y, si sigue sin ser claro, clasifica como `OTRO`.
-3. **Regla general de errores**: si CUALQUIER paso técnico falla (no se puede leer el correo, no se puede escribir en el Excel, no se puede enviar a Teams, no se puede mover el correo, la carpeta no se puede crear, etc.), **detén el procesamiento de ESE correo** y envía un mensaje al grupo de errores:
-   - Chat ID: `19:7ae5575d52c04e6c937c2e694a86e760@thread.v2` ("POD'S Operaciones (Nadie habla)")
-   - Contenido del mensaje: paso que falló, asunto del correo, remitente, y detalle del error (mensaje de la excepción/respuesta del MCP).
-   - Después de notificar, continúa con el SIGUIENTE correo (no abortes toda la ejecución por un solo correo fallido).
-   - **El correo que falló NO se mueve a `Procesados`** — queda en inbox para que sea reintentado en la próxima ejecución.
-   - **Excepción**: una clasificación ambigua NO es un error técnico — asigna `OTRO` y continúa normalmente (no notifiques al grupo de errores por esto).
-4. **Idempotencia**: los correos procesados quedan en `Procesados` y el filtro de carpeta (1a) los excluye. Solo se procesan correos que estén en el inbox.
-5. Procesa los correos **uno por uno, en orden cronológico** (más antiguo primero), para que el orden de asignación de Naciones en la lógica round-robin (sección 4.4) sea correcto.
+1. **Autonomía total** (sección 0).
+2. **Nunca leas ni proceses adjuntos.** Solo asunto, cuerpo, remitente, CC.
+3. **Destino único**: todas las alertas van al chat **POD'S Operaciones (Nadie habla)** — `19:7ae5575d52c04e6c937c2e694a86e760@thread.v2`. No se escribe en POD 1, POD 2, POD 3, Grupo Cerrado de Marketing ni en ningún DM.
+4. **Solo lectura del Excel.** Esta rutina NO escribe en el archivo de programas. Nada de round-robin de Naciones — esa lógica fue eliminada.
+5. **Errores técnicos**: si un paso falla para un correo, no lo muevas a `Procesados`, deja el detalle en el log de la corrida y continúa con el siguiente. No envíes mensajes de error al chat — el grupo es solo para alertas de producto.
+6. Ante duda entre alertar y no alertar, **no alertes**. El ruido cuesta más que un correo perdido, y Natalie igual revisa la bandeja.
 
 ---
 
-## 3. Asignación MCP por operación
+## 3. Qué cuenta como "correo de producto"
+
+Es de producto si el asunto o el cuerpo hace referencia a alguno de estos:
+
+- **Programa / curso de especialización**: código tipo `PE.EI.xx-xx.x`, `CE.EI.xx-xx.x`, `CG.EI.xx-xx.x`, `CO.xx.xx-xx.x`, `SM.EI.xx-xx.x`, o el nombre de un programa del Excel.
+- **Masterclass**: código tipo `MS.26.xx`, o la palabra "masterclass" con un tema concreto.
+- **Testeo**: código tipo `TS.xx.xx`, o el asunto empieza con `TESTEO`.
+- **Lanzamiento**: el asunto empieza con `LANZAMIENTO`, `NUEVO CURSO` o `NUEVO PROGRAMA` (ignorando corchetes).
+- **Summit / evento con código de producto**.
+
+Si no hay producto identificable, el correo **no** es de producto: se ignora.
+
+---
+
+## 4. Alerta vs notificación (el criterio)
+
+Solo se alerta lo que **pide acción o cambia el plan**.
+
+**ALERTAR:**
+- Piden algo concreto al área (piezas, temario, campaña, pauta, formulario, revisión).
+- Reportan un **bloqueo**: algo falta, no funciona, no aparece, está mal.
+- **Cambian una fecha, alcance o estado** ya comprometido (reprogramaciones, cancelaciones, adelantos).
+- **Lanzamiento de un producto nuevo** — dispara todo el flujo aunque el correo no pida nada explícito.
+
+**NO ALERTAR:**
+- Avisan que algo **ya se hizo** ("las piezas ya están cargadas", "la automatización ya está lista").
+- Comparten un recurso sin pedir acción (link de zoom, carpeta, archivo).
+- Conversación de **planificación todavía abierta** (fechas tentativas, propuestas en discusión).
+- Agradecimientos, confirmaciones de recibido, hilos sociales.
+
+Ejemplos reales, para calibrar:
+
+| Correo | Decisión |
+|---|---|
+| "LANZAMIENTO - PE.EI.37-26.2 - PE ENERGY DATA ANALYTICS" | ALERTAR (producto nuevo) |
+| "MS.26.09 se reprogramó al 09 de octubre, tomar acciones" | ALERTAR (cambio de fecha) |
+| "En la carpeta no se visualiza el Excel para la atención de los leads" (TS.01.26) | ALERTAR (bloqueo) |
+| "Las piezas gráficas y el video ya se encuentran cargados" | NO (avance) |
+| "Comparto link del zoom" | NO (recurso) |
+| "Los webinars de Grid se realizarían en las siguientes fechas..." | NO (planificación abierta) |
+
+---
+
+## 5. Buscar el producto y sus responsables en el Excel
+
+Archivo **"REGISTRAR PROGRAMAS WORKSHOPS.xlsx"** (Excel MCP de Composio, **solo lectura**, `EXCEL_GET_RANGE` sin `session_id`):
+- `item_id`: `5EEF575E-8A7D-4113-A6D1-8960A783CA00`
+- `drive_id`: `b!1U4iaBDsVk2MoPFpxkox96PVSF7eIfZPn1_TQQsa_Rux7EmX3JabSbzUbWh20VZS`
+
+Busca **primero por código exacto**; si el correo no trae código, por nombre del producto con coincidencia fuerte. Revisa las tres hojas en este orden:
+
+### 5.1 Hoja `INTAKE 2026` (programas y cursos) — id `{77AE9A59-5276-476B-92B1-DD6496B31CF7}`
+Datos desde la fila 4. Rango útil: `A4:P60`.
+- B = Intake · **C = Código** · **D = Nombre** · E = Horas · F = Inicio · G = Fin
+- H = Flow owner (**no se menciona en la alerta**) · **I = POD 1** · **J = POD 2**
+
+Los responsables que se mencionan son **col I y col J**.
+
+### 5.2 Hoja `Masterclass INTAKE ` (masterclasses; ojo el espacio final del nombre) — id `{94DF5B9B-A054-4B35-95DB-6D5684F05E57}`
+Datos desde la fila 4. Rango útil: `A4:N40`.
+- **B = Código** (`MS.26.xx`) · **C = Nombre** · **D = Responsable** · E = Fecha lanzamiento · F = Fecha masterclass
+
+### 5.3 Hoja `Testeos` — id `{78288797-B1BC-4310-BB82-3AAF7F9150E5}`
+Datos desde la fila 6. Rango útil: `A6:N60`.
+- **B = Código** · **C = Nombre del producto** · E = Solicitante · **F = Responsable**
+
+### 5.4 Reglas de resolución de responsables
+
+1. Si el producto **no está en ninguna hoja** (típico en lanzamientos de un intake nuevo y en testeos recientes): usa `@all`.
+2. Si está pero la celda de responsable está **vacía**: usa `@all`.
+3. Si el valor es una **Nación** (`TIERRA`, `AGUA`, `FUEGO`, `AIRE`, `Nacion Tierra`, `Nación Agua`, etc.): trátalo como sin responsable → `@all`. Las Naciones ya no se usan.
+4. Si hay varios nombres en la celda (`MICHAEL Y GERAL`), menciona a todos.
+5. Si el nombre no está en la tabla de la sección 7.2, ponlo en **negrita** sin mención real y agrega `@all`.
+
+---
+
+## 6. Estructura del mensaje
+
+Tono humano y directo, al grano. Tres bloques, sin encabezados decorativos y sin campo "De":
+
+```
+🔔 <CÓDIGO> — <Nombre del producto> (<Intake / fecha clave si aplica>)
+
+<Qué pasa, en una o dos frases propias: qué se necesita o qué cambió.>
+
+<menciones de los responsables>
+```
+
+Ejemplos ya validados:
+
+```
+🔔 PE.EI.37-26.2 — PE Energy Data Analytics · LANZAMIENTO
+
+Kevin Quispe avisa que se lanza este programa del Intake 3. Datos completos en el correo.
+
+@all — producto aún no registrado en el Excel, falta asignar responsables.
+```
+
+```
+🔔 MS.26.09 — ¿Quién paga la red del futuro? Tarifas inteligentes
+
+La masterclass se reprogramó al 09 de octubre 2026. Hay que mover pauta, piezas y recordatorios.
+
+@Michael @Geral
+```
+
+```
+🔔 TS.01.26 — TESTEO Diplomado en Protección de Sistemas Eléctricos de Potencia
+
+José Cárdenas reporta que el Excel para la atención de leads no aparece en la carpeta.
+
+@all — testeo sin responsable asignado en el Excel.
+```
+
+---
+
+## 7. Cómo enviar el mensaje (menciones reales)
+
+Usa `MICROSOFT_TEAMS_TEAMS_POST_CHAT_MESSAGE` con `content_type: "html"`, etiquetas `<at id="N">` en el cuerpo y el arreglo `mentions` en paralelo. **Verificado en producción el 10-09-2026.**
+
+### 7.1 `@all` (mención a todo el grupo)
+
+Se hace mencionando la conversación:
+
+```json
+{
+  "id": 0,
+  "mentionText": "POD'S Operaciones",
+  "mentioned": {
+    "conversation": {
+      "id": "19:7ae5575d52c04e6c937c2e694a86e760@thread.v2",
+      "displayName": "POD'S Operaciones (Nadie habla)",
+      "conversationIdentityType": "chat"
+    }
+  }
+}
+```
+
+### 7.2 Mención de persona
+
+```json
+{
+  "id": 1,
+  "mentionText": "Cesar Torres",
+  "mentioned": { "user": { "id": "<id de la tabla>", "displayName": "<display name>" } }
+}
+```
+
+| Nombre en el Excel | Display name | id |
+|---|---|---|
+| Cesar / CESAR | Inel Cesar Torres | `bac46f21-6c0e-4792-bc36-8922723663e2` |
+| Michael / MICHAEL | Inel Michael Merello | `f4b4c82e-f627-41eb-b911-83a598f382a0` |
+| Alexis / ALEXIS | Inel Alexis Alfaro Ticsihua | `2bd0c7b7-913d-42e1-95bd-d6123a23de57` |
+| Gerar / Geral / GERAL | Inel Gerar Pariona | `c9022dcd-3c88-413b-91ba-dfbd23d2d157` |
+| Renato / RENATO | Inel Renato Burneo | `44aacc1b-f58c-42d6-bd93-a0fdae96ae2d` |
+| Geraldine | Inel Geraldine Enriquez | `b3e3aeba-30ba-440d-902b-302a49c6e378` |
+| Sofia | Inel Sofía Villarruel | `0136259b-ee7f-4c15-87cf-a30b3b8777de` |
+| Saulo | Inel Saulo Ordoñez | `68dd4d59-2a3a-436e-a7d8-6241d226b4e7` |
+
+El `tenantId` no hace falta enviarlo; Graph lo resuelve solo.
+
+### 7.3 Deshacer una alerta
+
+`MICROSOFT_TEAMS_DELETE_SOFT_MESSAGE` **no sirve** para chats grupales (solo canales de un Team). Para borrar un mensaje de este chat hay que ir por el proxy de Graph:
+`POST /v1.0/me/chats/{chat_id}/messages/{message_id}/softDelete` con body `{}`.
+
+---
+
+## 8. Asignación MCP por operación
 
 | Operación | Vía | Detalle |
 |---|---|---|
-| Buscar correos con `marketing@inelinc.com` en To/CC (últimas 24h) | **Outlook MCP (Composio)** | `OUTLOOK_SEARCH_MESSAGES` con KQL `(to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<hace_24h>` — NO usar OUTLOOK_QUERY_EMAILS |
-| Crear carpeta `Procesados` (si no existe) | **Outlook MCP (Composio)** | Crear subcarpeta de inbox llamada `Procesados` |
-| Clasificación en 12 categorías | **Razonamiento de Claude** | Sin tool — usa criterio propio sobre asunto/cuerpo/remitente/CC (sección 4) |
-| Leer última "Nación" asignada en Excel "Testeos" (col M) | **Excel MCP (Composio)** | `EXCEL_GET_RANGE`, sin `session_id` para solo lectura |
-| Escribir nueva "Nación" en Excel "Testeos" (col M, nueva fila) | **Excel MCP (Composio)** | `EXCEL_UPDATE_RANGE` directamente (sin sesión) — usa `item_id` + `drive_id` + `worksheet_id` + `address` |
-| Enviar mensaje a Microsoft Teams (grupo o DM) | **Teams MCP (Composio)** | `MICROSOFT_TEAMS_*` para enviar mensaje al chat correspondiente (no aplica a PROVEEDOR_ADMIN_EXTERNO/OTRO) |
-| Mover correo a `Procesados` (solo si Teams fue exitoso) | **Outlook MCP (Composio)** | Mover a la carpeta `Procesados` — NO mover si Teams falló |
+| Buscar correos (últimas 24h) | Outlook MCP (Composio) | `OUTLOOK_SEARCH_MESSAGES` con la KQL de la sección 1 |
+| Clasificar producto / alerta vs notificación | Razonamiento de Claude | Sin tool — secciones 3 y 4 |
+| Leer producto y responsables | Excel MCP (Composio) | `EXCEL_GET_RANGE`, sin `session_id`, solo lectura |
+| Enviar alerta a Teams | Teams MCP (Composio) | `MICROSOFT_TEAMS_TEAMS_POST_CHAT_MESSAGE` con menciones (sección 7) |
+| Crear carpeta `Procesados` si no existe | Outlook MCP (Composio) | Subcarpeta del inbox |
+| Mover correo a `Procesados` | Outlook MCP (Composio) | Solo si el envío a Teams fue exitoso |
 
-No hay scripts de Python — todas las operaciones tienen MCP remoto disponible y conectado.
-
----
-
-## 4. Las 12 categorías de clasificación
-
-Clasifica cada correo usando asunto, cuerpo, remitente y CC. Si después de leer todo el contenido disponible la categoría sigue sin estar clara, usa `OTRO`.
-
-1. **PROGRAMA_SYNC** — Solicitudes/avisos relacionados con programas síncronos (cursos en vivo, programas con sesiones programadas en tiempo real con instructor).
-2. **MASTERCLASS** — Solicitudes/avisos relacionados con masterclasses.
-3. **WEBINAR** — Solicitudes/avisos relacionados con webinars.
-4. **TESTEO** — Solicitudes para testear/probar un producto o programa antes de su lanzamiento (testeos de programas). El código del producto suele tener prefijo distinto a `CG.` o `CO.`.
-5. **CORPORATIVO** — Comunicados institucionales oficiales dirigidos explícitamente a `marketing@inelinc.com` como área (anuncios de la empresa, políticas internas, comunicados de gerencia/dirección dirigidos a todas las áreas o a marketing como área). **NO uses esta categoría solo porque el tema "suena importante" o porque mencione reestructuración, finanzas, BESS, portafolio u otros temas internos de gestión que no son del área de marketing** — esos casos van a `OTRO` (y no se reenvían a nadie, ver 4.6). Reserva `CORPORATIVO` para cuando sea evidente que es un comunicado institucional formal destinado al área de marketing.
-6. **ASYNC_CURSO** — Cursos o programas asíncronos (sin sesiones en vivo).
-7. **INEL_CORP_GRID** — Asuntos relacionados con Inel Grid (energía / grid) a nivel corporativo.
-8. **CONTENT_INEL** — Contenido orgánico para la página principal / redes de Inel (no publicidad pagada).
-9. **RP** — Relaciones públicas / prensa / comunicados.
-10. **INEL_NOVA_EVENTOS** — Eventos relacionados con Inel Nova.
-11. **DISEÑO_CUSTOM** — Solicitudes de piezas de diseño personalizadas (no parte de un flujo estándar de programa/webinar).
-12. **PROVEEDOR_ADMIN_EXTERNO** — Correos de proveedores externos o asuntos administrativos externos (facturación, cotizaciones, coordinación con terceros).
-13. **OTRO** — Cualquier correo que no encaje claramente en ninguna categoría anterior, o cuya clasificación sea ambigua incluso después de leer todo el contenido disponible.
-
-### 4.1 Determinar el "equipo comercial" mencionado (para PROGRAMA_SYNC y MASTERCLASS)
-
-Para `PROGRAMA_SYNC` y `MASTERCLASS`, identifica en el cuerpo/asunto/remitente/CC del correo a qué equipo comercial pertenece el responsable mencionado:
-
-| Equipo comercial | Responsable(s) mencionado(s) | → Nación destino |
-|---|---|---|
-| WIND | Karen y/o Xiomara | NACIÓN TIERRA |
-| TIDE | Angge y/o Angie | NACIÓN AGUA |
-| SUN | Gabriela Torres | NACIÓN FUEGO |
-| Asíncronos | (sin responsable de equipo comercial / contexto asíncrono) | NACIÓN AIRE |
-
-Si no logras identificar con confianza a ningún responsable de la tabla, usa NACIÓN AIRE como destino por defecto para estos dos casos.
-
-### 4.2 WEBINAR, ASYNC_CURSO, INEL_NOVA_EVENTOS
-
-Estas tres categorías van **directo a NACIÓN AIRE**, sin necesidad de identificar equipo comercial.
-
-### 4.3 CORPORATIVO, INEL_CORP_GRID
-
-Ambas van **directo a NACIÓN TIERRA**. Adicionalmente, `CORPORATIVO` también debe notificar al grupo "general" de errores (mismo chat de la sección 2 regla #3) — esta notificación es informativa, NO es un error: envíale un mensaje breve indicando que llegó un correo CORPORATIVO y a quién se enrutó.
-
-### 4.4 TESTEO / Curso Gratuito (CG) / Curso Corporativo (CO) — lógica de asignación de Nación (round-robin)
-
-**Identifica si el correo pertenece a alguno de estos tres tipos** revisando asunto, cuerpo y código del producto. Aplica cualquiera de estos criterios:
-
-- **TESTEO**: el asunto (ignorando corchetes y mayúsculas/minúsculas) **empieza con** `TESTEO` — ej. `TESTEO: ...`, `[TESTEO] ...`, `[TESTEO: nombre]`. También si el cuerpo describe claramente un testeo/prueba de producto sin código CG./CO.
-- **Curso Gratuito (CG)**: el código del producto en el asunto/cuerpo **empieza con** `CG.` (ej. `CG.EI.05-26.1`). También si el asunto (ignorando corchetes) **empieza con** `NUEVO CURSO` o `NUEVO PROGRAMA` — ej. `[NUEVO CURSO] ...`, `NUEVO PROGRAMA - ...`.
-- **Curso Corporativo (CO)**: el código del producto empieza con `CO.` (ej. `CO.XX.XX-XX.X`). También aplica si el asunto (ignorando corchetes) **empieza con** `NUEVO CURSO` o `NUEVO PROGRAMA` y el contexto indica que es corporativo.
-
-**Regla de patrón de asunto** (detección simplificada): si el asunto del correo, una vez eliminados corchetes y su contenido de los extremos, **empieza con** alguna de estas palabras/frases (sin importar mayúsculas/minúsculas):
-- `NUEVO CURSO`
-- `NUEVO PROGRAMA`
-- `TESTEO`
-
-…entonces el correo entra directamente en la lógica round-robin de esta sección (TESTEO/CG/CO), sin importar si encontraste o no un código explícito. Usa el contexto del cuerpo para distinguir si es CG o CO, pero la clasificación en round-robin es la misma para los tres.
-
-Los tres tipos comparten el **mismo turno rotativo** en la columna M del Excel:
-
-1. Vía Excel MCP, lee la columna M ("Nación") de la hoja `Testeos` del archivo "REGISTRAR PROGRAMAS WORKSHOPS.xlsx":
-   - `item_id`: `5EEF575E-8A7D-4113-A6D1-8960A783CA00`
-   - `drive_id`: `b!1U4iaBDsVk2MoPFpxkox96PVSF7eIfZPn1_TQQsa_Rux7EmX3JabSbzUbWh20VZS`
-   - `worksheet_id`: `Testeos` (id `{78288797-B1BC-4310-BB82-3AAF7F9150E5}`)
-   - Lee desde `M6` hasta la última fila con datos (usa un rango amplio como `M6:M200` y descarta vacíos).
-2. Encuentra el valor **no vacío más reciente** (última fila con dato) en esa columna. Debe ser uno de: `Nacion Tierra`, `Nacion Agua`, `Nacion Fuego` (sin tilde — formato exacto; ignora mayúsculas/minúsculas y espacios extra al comparar, pero al escribir usa exactamente este formato).
-   - Si la columna está completamente vacía, asume que el ciclo arranca en `Nacion Tierra` y la siguiente asignación es `Nacion Agua`.
-3. Calcula la **siguiente** Nación en el ciclo (NO incluye AIRE):
-   - `Nacion Tierra` → siguiente = `Nacion Agua`
-   - `Nacion Agua` → siguiente = `Nacion Fuego`
-   - `Nacion Fuego` → siguiente = `Nacion Tierra`
-4. Escribe el valor de la Nación calculada en la **siguiente fila vacía** de la columna M usando `EXCEL_UPDATE_RANGE` directamente (sin sesión). Usa el string literal exacto (`"Nacion Tierra"`, `"Nacion Agua"` o `"Nacion Fuego"`, sin tilde).
-5. Envía el mensaje de Teams al chat de la Nación calculada (tabla de Naciones, sección 5).
-
-### 4.5 CONTENT_INEL
-
-Va **directo a NACIÓN AGUA**.
-
-### 4.6 RP, PROVEEDOR_ADMIN_EXTERNO, OTRO
-
-- **RP**: envía el mensaje al **DM de Renato Burneo en Microsoft Teams** (chat ID en sección 5).
-- **PROVEEDOR_ADMIN_EXTERNO** y **OTRO**: por privacidad, **no se hace absolutamente nada** con estos correos — no se envía mensaje a Teams, no se reenvían, y **no se mueven a `Procesados`** (quedan tal cual en el inbox). Solo se cuentan en el resumen final (sección 1, paso 3).
-
-### 4.7 DISEÑO_CUSTOM
-
-Va **directo a POD 3**.
+No hay scripts de Python. Ninguna operación escribe en el Excel.
 
 ---
 
-## 5. Tabla de ruteo a Microsoft Teams (chat IDs)
+## 9. Variables de entorno
 
-### Naciones
-
-| Nación | Chat ID |
-|---|---|
-| NACIÓN TIERRA (1) | `19:cf855554e4db487ca3404f906b025937@thread.v2` |
-| NACIÓN AGUA (2) | `19:865d4edff2d941e6baf83cfb9de1350e@thread.v2` |
-| NACIÓN FUEGO (3) | `19:f5c8016f7a3843ab81cad908f2e5b271@thread.v2` |
-| NACIÓN AIRE (4) | `19:a915aaa497f94e869b36386458e228ed@thread.v2` |
-
-### Otros destinos
-
-| Destino | Chat ID |
-|---|---|
-| POD 3 (DISEÑO_CUSTOM) | `19:887c0ff964564890861115def582e8a4@thread.v2` |
-| DM Renato Burneo (RP) | `19:44aacc1b-f58c-42d6-bd93-a0fdae96ae2d_c53be72d-d4a8-4d96-ba99-e9f15bee6d4e@unq.gbl.spaces` |
-| Grupo de errores / "general" ("POD'S Operaciones (Nadie habla)") | `19:7ae5575d52c04e6c937c2e694a86e760@thread.v2` |
-
-### Resumen final por categoría
-
-| Categoría | Destino Teams | Mover a Procesados |
-|---|---|---|
-| PROGRAMA_SYNC | Nación según equipo comercial (4.1) | ✅ si envío exitoso |
-| MASTERCLASS | Nación según equipo comercial (4.1) | ✅ si envío exitoso |
-| WEBINAR | NACIÓN AIRE | ✅ si envío exitoso |
-| TESTEO / CG / CO | Nación calculada por round-robin (4.4) | ✅ si envío exitoso |
-| CORPORATIVO | NACIÓN TIERRA + aviso a grupo "general" | ✅ si envío exitoso |
-| ASYNC_CURSO | NACIÓN AIRE | ✅ si envío exitoso |
-| INEL_CORP_GRID | NACIÓN TIERRA | ✅ si envío exitoso |
-| CONTENT_INEL | NACIÓN AGUA | ✅ si envío exitoso |
-| RP | DM Renato Burneo | ✅ si envío exitoso |
-| INEL_NOVA_EVENTOS | NACIÓN AIRE | ✅ si envío exitoso |
-| DISEÑO_CUSTOM | POD 3 | ✅ si envío exitoso |
-| PROVEEDOR_ADMIN_EXTERNO | Ninguno | ❌ nunca |
-| OTRO | Ninguno | ❌ nunca |
+Ninguna. Todo va por los connectors de Composio (Outlook, Teams, Excel) del environment del Routine.
 
 ---
 
-## 6. Formato del mensaje de Teams
+## 10. Fuera de alcance del MVP
 
-Usa **viñetas, negritas, emojis y líneas en blanco** entre secciones. No incluyas el campo "De/Remitente" en el mensaje. Estructura clara y escaneable — no texto en bloque.
-
-### Mensaje principal (para el grupo o DM de la Nación/destino)
-
-```
-📩 **[CATEGORÍA]** — Nuevo correo
-
-• 📋 **Asunto:** <asunto del correo>
-• 📅 **Recibido:** <fecha y hora de recepción>
-
-• 📝 **Resumen:**
-  <línea 1 del resumen>
-  <línea 2 del resumen>
-  <línea 3 si aplica>
-
-• 🌍 **Nación asignada:** <NACIÓN X>   ← solo si aplica (TESTEO/CG/CO/CORPORATIVO/etc.)
-```
-
-Si el correo menciona fechas importantes (inicio de curso, fecha límite, evento, etc.), agrégalas como viñeta adicional:
-
-```
-• 📆 **Fecha clave:** <fecha mencionada en el correo>
-```
-
-### Notificación informativa de CORPORATIVO al grupo "general" (sección 4.3)
-
-```
-ℹ️ **Correo CORPORATIVO recibido**
-
-• 📋 **Asunto:** <asunto>
-• 📅 **Recibido:** <fecha y hora>
-• 🌍 **Enrutado a:** NACIÓN TIERRA
-```
-
-### Notificaciones de error (sección 2, regla #3)
-
-```
-⚠️ **Error procesando correo**
-
-• 📋 **Asunto:** <asunto del correo>
-• 📅 **Recibido:** <fecha y hora>
-• 🔧 **Paso que falló:** <descripción del paso>
-• ❌ **Detalle del error:** <mensaje de error o respuesta del MCP>
-```
-
----
-
-## 7. Variables de entorno requeridas
-
-Ninguna. Todas las operaciones se hacen vía MCPs de Composio (Outlook, Teams, Excel) ya conectados en el entorno del Routine. No hay credenciales propias que gestionar en `.env`.
-
----
-
-## 8. Notas / preferencias del usuario
-
-- La cadencia de ejecución (cron) la configura el usuario directamente en la configuración del Routine — no es responsabilidad de este CLAUDE.md.
-- Nunca proceses ni menciones adjuntos de los correos, sin excepción.
+- Correos que no son de producto (corporativos, RP, proveedores, contenido orgánico): se ignoran por completo.
+- Ruteo a POD 1 / POD 2 / POD 3 / Grupo Cerrado de Marketing. Sus chat IDs quedan registrados por si se amplía el alcance:
+  - POD 1 — `19:c20701908d9f4748806998aae4125d25@thread.v2`
+  - POD 2 — `19:17f30b7bd23b43dd8a4525df322136a4@thread.v2`
+  - POD 3 — `19:887c0ff964564890861115def582e8a4@thread.v2`
+  - Grupo Cerrado de Marketing — `19:7890139f743440ea828b4039999e01f5@thread.v2`
+- Mensaje de resumen al final de la corrida.
+- Escritura en el Excel de cualquier tipo.

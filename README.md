@@ -1,21 +1,27 @@
-# Clasificador y Enrutador de Correos — Área de Marketing INEL
+# Alerta de Correos de Producto — Área de Marketing INEL
 
 Routine de Claude Code que corre periódicamente y:
 
-1. Revisa los correos nuevos de la bandeja de entrada de Natalie Aguirre (`natalieaguirre@inelinc.com`), donde llegan también los correos enviados al alias `marketing@inelinc.com`.
-2. Clasifica cada uno en una de 12 categorías (PROGRAMA_SYNC, MASTERCLASS, WEBINAR, TESTEO, CORPORATIVO, ASYNC_CURSO, INEL_CORP_GRID, CONTENT_INEL, RP, INEL_NOVA_EVENTOS, DISEÑO_CUSTOM, PROVEEDOR_ADMIN_EXTERNO, OTRO).
-3. Envía un mensaje resumen al grupo o persona de Microsoft Teams correspondiente.
-4. Para correos de TESTEO, calcula y registra la "Nación" (TIERRA/AGUA/FUEGO) que le toca por turno en el Excel de Testeos.
-5. Mueve el correo procesado a la carpeta `Procesados` de Outlook.
-6. Si algo falla técnicamente, avisa al grupo de errores con el detalle.
+1. Revisa los correos nuevos de la bandeja de Natalie Aguirre (`natalieaguirre@inelinc.com`), donde llegan también los correos enviados al alias `marketing@inelinc.com`.
+2. Se queda solo con los que hablan de un **producto**: programas, cursos, masterclasses, testeos, lanzamientos y summits.
+3. Distingue lo que **pide acción o cambia el plan** (alerta) de lo que solo **informa un avance o comparte un recurso** (no alerta).
+4. Para lo que amerita alerta: busca el producto y sus responsables en el Excel "REGISTRAR PROGRAMAS WORKSHOPS.xlsx" (hojas `INTAKE 2026`, `Masterclass INTAKE ` y `Testeos`, **solo lectura**).
+5. Manda **una sola alerta** al grupo de Teams **POD'S Operaciones (Nadie habla)**, con @mención real a los responsables — o `@all` cuando el producto no tiene responsable asignado.
+6. Mueve el correo alertado a la carpeta `Procesados` de Outlook.
 
 Toda la lógica detallada está en [`CLAUDE.md`](./CLAUDE.md) — esas son las instrucciones que el Routine ejecuta en cada corrida.
 
+## Alcance del MVP
+
+- Un único destino: POD'S Operaciones. No se escribe en POD 1/2/3 ni en DMs.
+- No se escribe nada en el Excel (la lógica de "Naciones" con round-robin fue eliminada).
+- Los correos que no son de producto se ignoran por completo: ni alerta, ni movimiento de carpeta.
+- Nunca se leen adjuntos, y los correos no se marcan como leídos.
+
 ## Requisitos
 
-- No requiere instalación de dependencias (`requirements.txt` vacío, `setup.sh` no hace nada).
-- No requiere variables de entorno (`.env.example`).
-- Requiere 3 connectors de Composio activos: **Outlook**, **Microsoft Teams**, **Excel** (todos sobre la cuenta de Microsoft de Natalie Aguirre, `natalieaguirre@inelinc.com`).
+- Sin dependencias (`requirements.txt` vacío, `setup.sh` no hace nada) y sin variables de entorno (`.env.example`).
+- Requiere 3 connectors de Composio activos: **Outlook**, **Microsoft Teams**, **Excel** (todos sobre la cuenta de Microsoft de Natalie Aguirre).
 
 ## Cómo desplegarlo
 
