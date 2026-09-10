@@ -1,44 +1,55 @@
 # Cómo conectar este Routine
 
-Este Routine no necesita credenciales propias ni archivos `.env` con secretos. Todo el trabajo lo hace a través de tres conectores MCP de Composio que ya tienes vinculados a tu cuenta de Microsoft (Natalie Aguirre):
+Este Routine no necesita credenciales propias ni archivos `.env` con secretos. Todo el trabajo lo hace a través de tres conectores MCP de Composio ya vinculados a la cuenta de Microsoft de Natalie Aguirre:
 
-1. **Outlook** — para leer correos de la bandeja de entrada de Natalie (`natalieaguirre@inelinc.com`, donde también llegan los correos del alias `marketing@inelinc.com`) y moverlos a la carpeta `Procesados`.
-2. **Microsoft Teams** — para enviar los mensajes a los grupos y al DM de Renato Burneo.
-3. **Excel** — para leer y escribir la columna "Nación" de la hoja `Testeos`.
+1. **Outlook** — para leer los correos de la bandeja (`natalieaguirre@inelinc.com`, donde también llegan los del alias `marketing@inelinc.com`) y ponerle la categoría `Alertado` a los que ya se avisaron.
+2. **Microsoft Teams** — para enviar la alerta al grupo POD'S Operaciones (Nadie habla), con @menciones reales.
+3. **Excel** — para leer (nunca escribir) las hojas `INTAKE 2026`, `Masterclass INTAKE ` y `Testeos`.
 
 ## Pasos para crear el Routine en claude.ai/code/routines
 
-1. Sube esta carpeta completa a un repositorio de GitHub (privado), por ejemplo `routine-clasificador-correos-marketing`.
-2. Ve a `claude.ai/code/routines` → **New routine**.
-3. Selecciona el repositorio que acabas de subir.
-4. En **Environment**, crea uno custom:
+1. Ve a `claude.ai/code/routines` → **New routine**.
+2. Selecciona el repositorio `routine-filtro-correos`.
+3. En **Environment**, crea uno custom:
    - Build command: `bash setup.sh`
    - Network access: **Full**
-   - No necesitas agregar ninguna variable de entorno (ver `.env.example`).
-5. En **Connectors**, asegúrate de tener activos (y deja solo estos, quita los que no se usen):
+   - Sin variables de entorno (ver `.env.example`).
+4. En **Connectors**, deja activos solo estos tres:
    - Composio — Outlook
    - Composio — Microsoft Teams
    - Composio — Excel
-6. En **Trigger**, configura el cron con la cadencia que prefieras (mínimo cada 1 hora). Por ejemplo, 2 veces al día.
-7. En el prompt del Routine, pega:
+5. En **Trigger**, configura el cron **1 vez al día**. La ventana de búsqueda es de 30 horas, así que hay 6 horas de margen si una corrida se atrasa o falla.
+6. En el prompt del Routine, pega:
 
    ```
-   Lee CLAUDE.md y ejecuta la automatización descrita ahí. Operas con autonomía
-   plena: no preguntas, no pides confirmación, no esperas input — nadie puede
-   contestarte. Tienes libertad total para decidir según las instrucciones y tu
-   juicio (como --dangerously-skip-permissions). Si algo es genuinamente
-   imposible, detente con nota clara y exit error. Respeta la asignación MCP vs
-   script del CLAUDE.md. Reporta resumen al final.
+   Lee CLAUDE.md y ejecuta la automatización descrita ahí.
+
+   Operas con autonomía plena: no preguntas, no pides confirmación, no esperas
+   input — nadie puede contestarte. Decide con tu propio juicio dentro de las
+   reglas del documento (como --dangerously-skip-permissions).
+
+   Recordatorios de las reglas duras:
+   - Solo alertas correos de PRODUCTO, y solo los que piden acción, reportan un
+     bloqueo, cambian una fecha o lanzan algo nuevo. Ante la duda, NO alertes.
+   - Destino único: el chat POD'S Operaciones (Nadie habla). Ningún otro grupo,
+     ningún DM.
+   - El Excel es SOLO LECTURA. No escribas nada en él.
+   - La bandeja de Natalie no se altera: no marcar como leído, no mover, no
+     borrar, no responder. La única escritura permitida en Outlook es agregar
+     la categoría "Alertado" a un correo ya notificado.
+   - Nunca leas ni menciones adjuntos.
+
+   Reporta al final, en el log de la corrida, qué correos revisaste y qué
+   decidiste con cada uno.
    ```
 
-8. Crea el Routine y dale **Run now** para probar el primer run.
+7. Crea el Routine y dale **Run now** para probar la primera corrida.
 
-## Verificación del primer run
+## Verificación de la primera corrida
 
-Revisa:
-- Que la carpeta `Procesados` se haya creado (si no existía) dentro de la bandeja de `natalieaguirre@inelinc.com`.
-- Que los correos pendientes hayan llegado a los chats de Teams correctos según la tabla de ruteo de `CLAUDE.md`.
-- Si un correo era TESTEO, que la columna M de la hoja `Testeos` tenga la nueva "Nación" escrita correctamente.
-- Que no haya mensajes inesperados en el grupo "POD'S Operaciones (Nadie habla)" (grupo de errores).
+- Que las alertas hayan llegado al grupo POD'S Operaciones, con las @menciones en azul (no como texto suelto).
+- Que los correos alertados tengan la categoría `Alertado` en Outlook.
+- Que **ningún** correo haya cambiado de carpeta ni aparezca como leído.
+- Que en el log estén listados los correos revisados con la decisión de cada uno — ahí se ve si el criterio de alerta vs notificación está calibrando bien.
 
-Si algo falla, revisa el log del run — el Routine deja un mensaje de error en ese grupo de Teams con el detalle exacto del paso que falló.
+Si la categoría `Alertado` no existe todavía en el buzón, Outlook la aplica igual pero sin color. Para darle color, créala una vez desde Outlook (clic derecho en un correo → Categorizar → Nueva categoría).

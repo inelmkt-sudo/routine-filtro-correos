@@ -13,28 +13,31 @@ Si algo es **genuinamente irresoluble** (falta una credencial, un recurso no exi
 
 ## 1. Objetivo de cada ejecución
 
-1. Buscar los correos con `marketing@inelinc.com` en To o CC recibidos en las **últimas 24 horas**, con `OUTLOOK_SEARCH_MESSAGES` y esta KQL:
+1. Buscar los correos con `marketing@inelinc.com` en To o CC recibidos en las **últimas 30 horas**, con `OUTLOOK_SEARCH_MESSAGES` y esta KQL:
    ```
-   (to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<FECHA_HACE_24H>
+   (to:marketing@inelinc.com OR cc:marketing@inelinc.com) AND received>=<FECHA_HACE_30H>
    ```
-   `<FECHA_HACE_24H>` = timestamp ISO 8601 de hace 24 horas. **NO uses `OUTLOOK_QUERY_EMAILS`** ni leas el inbox completo.
+   `<FECHA_HACE_30H>` = timestamp ISO 8601 de hace 30 horas. **NO uses `OUTLOOK_QUERY_EMAILS`** ni leas el inbox completo.
+
+   > La rutina corre 1 vez al día, pero la ventana es de 30h **a propósito**: 6 horas de solape para que ningún correo se pierda si el cron se atrasa o una corrida falla. El solape no genera alertas repetidas porque la categoría `Alertado` (paso 2) excluye lo ya avisado.
 
    Descarta el correo si se cumple cualquiera de estos filtros:
 
-   a) **Carpeta**: el `parentFolderId` NO corresponde al inbox (ya fue movido por reglas de Outlook o por una corrida anterior). No lo toques.
-   b) **Remitente interno de marketing** — ellos ya saben de lo que escriben:
+   a) **Ya alertado**: el correo tiene la categoría `Alertado` (campo `categories`). Pídelo con `select` al leer el correo.
+   b) **Carpeta**: el `parentFolderId` NO corresponde al inbox (fue movido por una regla de Outlook o archivado por Natalie). No lo toques.
+   c) **Remitente interno de marketing** — ellos ya saben de lo que escriben:
       `cesartorres@inelinc.com`, `sofiavillarruel@inelinc.com`, `michaelmerello@inelinc.com`, `alexisalfaro@inelinc.com`, `renatoburneo@inelinc.com`, `sauloordonez@inelinc.com`, `gerarpariona@inelinc.com`, `pod2@inelinc.com`, `natalieaguirre@inelinc.com`.
 
 2. Para cada correo que pase los filtros, en orden cronológico (más antiguo primero):
    - Leer **asunto, cuerpo, remitente y CC** (NUNCA adjuntos — ni los abras, ni los menciones, ni los proceses).
    - Decidir si es **de producto** (sección 3). Si no lo es: no hacer nada, ni alerta ni mover.
    - Decidir si es **alerta o notificación** (sección 4). Si es notificación: no hacer nada, ni alerta ni mover.
-   - Si es alerta: identificar el producto y sus responsables en el Excel (sección 5), enviar el mensaje a POD'S Operaciones (secciones 6 y 7) y **mover el correo a `Procesados`** solo si el envío fue exitoso.
-   - **No marques como leído** ningún correo — Natalie los revisa con detenimiento.
+   - Si es alerta: identificar el producto y sus responsables en el Excel (sección 5), enviar el mensaje a POD'S Operaciones (secciones 6 y 7) y, **solo si el envío fue exitoso**, marcar el correo con la categoría `Alertado` (sección 2.4).
+   - **No marques como leído** ningún correo y **no lo muevas de carpeta** — la bandeja de Natalie debe quedar exactamente como estaba.
 
-**Éxito** = todos los correos de producto que ameritaban alerta fueron notificados y movidos a `Procesados`. Si no hay ninguno, termina con `exit 0`.
+**Éxito** = todos los correos de producto que ameritaban alerta fueron notificados y quedaron marcados con `Alertado`. Si no hay ninguno, termina con `exit 0`.
 
-**Idempotencia**: los correos alertados quedan en `Procesados`, que el filtro 1a excluye. Los ignorados siguen en el inbox, pero como el criterio es determinista y la ventana es de 24h, no generan alertas repetidas.
+**Idempotencia**: la categoría `Alertado` es la única memoria de la rutina. Un correo alertado la lleva y el filtro 1a lo excluye en la corrida siguiente, aunque siga cayendo dentro de la ventana de 30h. Los correos que se ignoran no se marcan: como el criterio es determinista, la corrida siguiente vuelve a ignorarlos.
 
 ---
 
@@ -42,10 +45,12 @@ Si algo es **genuinamente irresoluble** (falta una credencial, un recurso no exi
 
 1. **Autonomía total** (sección 0).
 2. **Nunca leas ni proceses adjuntos.** Solo asunto, cuerpo, remitente, CC.
-3. **Destino único**: todas las alertas van al chat **POD'S Operaciones (Nadie habla)** — `19:7ae5575d52c04e6c937c2e694a86e760@thread.v2`. No se escribe en POD 1, POD 2, POD 3, Grupo Cerrado de Marketing ni en ningún DM.
-4. **Solo lectura del Excel.** Esta rutina NO escribe en el archivo de programas. Nada de round-robin de Naciones — esa lógica fue eliminada.
-5. **Errores técnicos**: si un paso falla para un correo, no lo muevas a `Procesados`, deja el detalle en el log de la corrida y continúa con el siguiente. No envíes mensajes de error al chat — el grupo es solo para alertas de producto.
-6. Ante duda entre alertar y no alertar, **no alertes**. El ruido cuesta más que un correo perdido, y Natalie igual revisa la bandeja.
+3. **La bandeja de Natalie no se altera.** No marques como leído, no muevas de carpeta, no borres, no respondas, no archives. La única escritura permitida en Outlook es agregar la categoría `Alertado` a un correo ya notificado. Leer un correo por Graph **no** cambia `isRead`, así que basta con no pedirlo explícitamente.
+4. **Cómo marcar `Alertado`**: `OUTLOOK_UPDATE_USER_MAIL_FOLDER_MESSAGE` con `user_id: "me"`, `mail_folder_id: "inbox"`, el `message_id`, y `categories` = las categorías que el correo ya tenía **más** `"Alertado"`. Nunca envíes `isRead` ni ningún otro campo en esa llamada, y nunca pises las categorías existentes.
+5. **Destino único**: todas las alertas van al chat **POD'S Operaciones (Nadie habla)** — `19:7ae5575d52c04e6c937c2e694a86e760@thread.v2`. No se escribe en POD 1, POD 2, POD 3, Grupo Cerrado de Marketing ni en ningún DM.
+6. **Solo lectura del Excel.** Esta rutina NO escribe en el archivo de programas. Nada de round-robin de Naciones — esa lógica fue eliminada.
+7. **Errores técnicos**: si un paso falla para un correo, no lo marques como `Alertado`, deja el detalle en el log de la corrida y continúa con el siguiente. No envíes mensajes de error al chat — el grupo es solo para alertas de producto.
+8. Ante duda entre alertar y no alertar, **no alertes**. El ruido cuesta más que un correo perdido, y Natalie igual revisa la bandeja.
 
 ---
 
@@ -221,12 +226,11 @@ El `tenantId` no hace falta enviarlo; Graph lo resuelve solo.
 
 | Operación | Vía | Detalle |
 |---|---|---|
-| Buscar correos (últimas 24h) | Outlook MCP (Composio) | `OUTLOOK_SEARCH_MESSAGES` con la KQL de la sección 1 |
+| Buscar correos (últimas 30h) | Outlook MCP (Composio) | `OUTLOOK_SEARCH_MESSAGES` con la KQL de la sección 1 |
 | Clasificar producto / alerta vs notificación | Razonamiento de Claude | Sin tool — secciones 3 y 4 |
 | Leer producto y responsables | Excel MCP (Composio) | `EXCEL_GET_RANGE`, sin `session_id`, solo lectura |
 | Enviar alerta a Teams | Teams MCP (Composio) | `MICROSOFT_TEAMS_TEAMS_POST_CHAT_MESSAGE` con menciones (sección 7) |
-| Crear carpeta `Procesados` si no existe | Outlook MCP (Composio) | Subcarpeta del inbox |
-| Mover correo a `Procesados` | Outlook MCP (Composio) | Solo si el envío a Teams fue exitoso |
+| Marcar el correo como `Alertado` | Outlook MCP (Composio) | `OUTLOOK_UPDATE_USER_MAIL_FOLDER_MESSAGE`, solo el campo `categories`, y solo si el envío a Teams fue exitoso |
 
 No hay scripts de Python. Ninguna operación escribe en el Excel.
 
@@ -248,3 +252,4 @@ Ninguna. Todo va por los connectors de Composio (Outlook, Teams, Excel) del envi
   - Grupo Cerrado de Marketing — `19:7890139f743440ea828b4039999e01f5@thread.v2`
 - Mensaje de resumen al final de la corrida.
 - Escritura en el Excel de cualquier tipo.
+- Mover correos a una carpeta `Procesados` (se descartó: la bandeja no se reordena).
