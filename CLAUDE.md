@@ -78,7 +78,12 @@ Solo se alerta lo que **pide acción o cambia el plan**.
 - **Cambian una fecha, alcance o estado** ya comprometido (reprogramaciones, cancelaciones, adelantos).
 - **Lanzamiento de un producto nuevo** — dispara todo el flujo aunque el correo no pida nada explícito.
 
-**NO ALERTAR:**
+**EXCEPCIÓN — TESTEOS: SIEMPRE ALERTAR.**
+Todo correo de testeo (código `TS.xx.xx`, asunto que empieza con `TESTEO`, o cuerpo que trata claramente de un testeo de producto) se alerta **aunque sea solo una notificación** ("la automatización ya está lista", "se cargaron las piezas", "el formulario está activo"). El objetivo es que Operaciones vea cada movimiento del testeo y **designe o confirme a un responsable**. Las reglas de NO ALERTAR de abajo no aplican a testeos.
+- Si el testeo tiene responsable en la hoja `Testeos`: mencionarlo para que dé seguimiento.
+- Si no tiene responsable: `@all` pidiendo explícitamente que se asigne uno (ver ejemplo en la sección 6).
+
+**NO ALERTAR** (salvo testeos):
 - Avisan que algo **ya se hizo** ("las piezas ya están cargadas", "la automatización ya está lista").
 - Comparten un recurso sin pedir acción (link de zoom, carpeta, archivo).
 - Conversación de **planificación todavía abierta** (fechas tentativas, propuestas en discusión).
@@ -91,7 +96,8 @@ Ejemplos reales, para calibrar:
 | "LANZAMIENTO - PE.EI.37-26.2 - PE ENERGY DATA ANALYTICS" | ALERTAR (producto nuevo) |
 | "MS.26.09 se reprogramó al 09 de octubre, tomar acciones" | ALERTAR (cambio de fecha) |
 | "En la carpeta no se visualiza el Excel para la atención de los leads" (TS.01.26) | ALERTAR (bloqueo) |
-| "Las piezas gráficas y el video ya se encuentran cargados" | NO (avance) |
+| "La automatización se encuentra realizada: TESTEO - TS.01.26 ..." | ALERTAR (testeo: siempre se alerta) |
+| "Las piezas gráficas y el video ya se encuentran cargados" (MS.26.10) | NO (avance, no es testeo) |
 | "Comparto link del zoom" | NO (recurso) |
 | "Los webinars de Grid se realizarían en las siguientes fechas..." | NO (planificación abierta) |
 
@@ -166,6 +172,16 @@ La masterclass se reprogramó al 09 de octubre 2026. Hay que mover pauta, piezas
 José Cárdenas reporta que el Excel para la atención de leads no aparece en la carpeta.
 
 @all — testeo sin responsable asignado en el Excel.
+```
+
+Testeo que solo notifica (sin responsable → pedir designación):
+
+```
+🔔 TS.01.26 — TESTEO Diplomado en Protección de Sistemas Eléctricos de Potencia
+
+Brandon Aguirre (OTI) avisa que la automatización del testeo ya está lista.
+
+@all — falta designar responsable para darle seguimiento.
 ```
 
 ---
