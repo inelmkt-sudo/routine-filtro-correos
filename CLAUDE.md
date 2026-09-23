@@ -78,16 +78,21 @@ Solo se alerta lo que **pide acción o cambia el plan**.
 - **Cambian una fecha, alcance o estado** ya comprometido (reprogramaciones, cancelaciones, adelantos).
 - **Lanzamiento de un producto nuevo** — dispara todo el flujo aunque el correo no pida nada explícito.
 
-**EXCEPCIÓN — TESTEOS: SIEMPRE ALERTAR.**
-Todo correo de testeo (código `TS.xx.xx`, asunto que empieza con `TESTEO`, o cuerpo que trata claramente de un testeo de producto) se alerta **aunque sea solo una notificación** ("la automatización ya está lista", "se cargaron las piezas", "el formulario está activo"). El objetivo es que Operaciones vea cada movimiento del testeo y **designe o confirme a un responsable**. Las reglas de NO ALERTAR de abajo no aplican a testeos.
-- Si el testeo tiene responsable en la hoja `Testeos`: mencionarlo para que dé seguimiento.
-- Si no tiene responsable: `@all` pidiendo explícitamente que se asigne uno (ver ejemplo en la sección 6).
+**TESTEOS — el caso que sí importa aunque nadie pida nada:**
+Un correo de testeo (código `TS.xx.xx`, asunto que empieza con `TESTEO`, o cuerpo que trata claramente de un testeo de producto) se alerta cuando:
+- Es un **testeo nuevo** o entra en una etapa nueva (se solicita, arranca, cierra, se lanza el producto testeado).
+- **No tiene responsable asignado** en la hoja `Testeos` — hay que designar a alguien, y esa es la acción pendiente. Usa `@all` pidiéndolo explícitamente (ver ejemplo en la sección 6).
+- Hay un **bloqueo** o algo que resolver.
 
-**NO ALERTAR** (salvo testeos):
-- Avisan que algo **ya se hizo** ("las piezas ya están cargadas", "la automatización ya está lista").
+Un testeo que ya tiene responsable y solo reporta avance ("la automatización quedó lista", "se cargaron las piezas") **no se alerta**: no hay nada que designar ni que decidir.
+
+**NO ALERTAR:**
+- **Actualizaciones informativas**: "se actualizó X", "se añadió Y", "ya se cargó Z", "quedó listo". Si nadie del área tiene que hacer algo a partir del correo, es información, no alerta. Este es el caso más común y el que más ruido genera — ante la duda, cae acá.
 - Comparten un recurso sin pedir acción (link de zoom, carpeta, archivo).
 - Conversación de **planificación todavía abierta** (fechas tentativas, propuestas en discusión).
 - Agradecimientos, confirmaciones de recibido, hilos sociales.
+
+**La pregunta que decide**: ¿alguien del área tiene que *hacer* algo por este correo — o decidir, o asignarlo? Si la respuesta es no, no se alerta, por muy relevante que parezca la información.
 
 Ejemplos reales, para calibrar:
 
@@ -96,8 +101,10 @@ Ejemplos reales, para calibrar:
 | "LANZAMIENTO - PE.EI.37-26.2 - PE ENERGY DATA ANALYTICS" | ALERTAR (producto nuevo) |
 | "MS.26.09 se reprogramó al 09 de octubre, tomar acciones" | ALERTAR (cambio de fecha) |
 | "En la carpeta no se visualiza el Excel para la atención de los leads" (TS.01.26) | ALERTAR (bloqueo) |
-| "La automatización se encuentra realizada: TESTEO - TS.01.26 ..." | ALERTAR (testeo: siempre se alerta) |
-| "Las piezas gráficas y el video ya se encuentran cargados" (MS.26.10) | NO (avance, no es testeo) |
+| "TESTEO - TS.02.26 ..." de un testeo que no está en la hoja `Testeos` o está sin responsable | ALERTAR (falta designar) |
+| "La automatización se encuentra realizada: TESTEO - TS.01.26 ..." y el testeo ya tiene responsable | NO (avance, ya hay quién) |
+| "Las piezas gráficas y el video ya se encuentran cargados" (MS.26.10) | NO (avance) |
+| "Se actualizó el temario en la carpeta" / "Se añadió el video a la plataforma" | NO (actualización informativa) |
 | "Comparto link del zoom" | NO (recurso) |
 | "Los webinars de Grid se realizarían en las siguientes fechas..." | NO (planificación abierta) |
 
@@ -174,12 +181,12 @@ José Cárdenas reporta que el Excel para la atención de leads no aparece en la
 @all — testeo sin responsable asignado en el Excel.
 ```
 
-Testeo que solo notifica (sin responsable → pedir designación):
+Testeo sin responsable → pedir designación:
 
 ```
-🔔 TS.01.26 — TESTEO Diplomado en Protección de Sistemas Eléctricos de Potencia
+🔔 TS.02.26 — TESTEO PE Dinámica y Control de Sistemas con IBR's
 
-Brandon Aguirre (OTI) avisa que la automatización del testeo ya está lista.
+Arrancó el testeo y no tiene responsable en el Excel.
 
 @all — falta designar responsable para darle seguimiento.
 ```

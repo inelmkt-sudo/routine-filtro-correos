@@ -31,8 +31,11 @@ Este Routine no necesita credenciales propias ni archivos `.env` con secretos. T
    Recordatorios de las reglas duras:
    - Solo alertas correos de PRODUCTO, y solo los que piden acción, reportan un
      bloqueo, cambian una fecha o lanzan algo nuevo. Ante la duda, NO alertes.
-   - Excepción: los correos de TESTEO se alertan SIEMPRE, aunque solo
-     notifiquen un avance, para que Operaciones designe o confirme responsable.
+   - Las actualizaciones informativas ("se actualizó X", "se añadió Y", "ya
+     quedó listo") NO se alertan: si nadie del área tiene que hacer algo, es
+     información, no alerta.
+   - Los TESTEOS sí se alertan cuando son nuevos, cambian de etapa, están
+     bloqueados o no tienen responsable asignado (ahí la acción es designarlo).
    - Destino único: el chat POD'S Operaciones (Nadie habla). Ningún otro grupo,
      ningún DM.
    - El Excel es SOLO LECTURA. No escribas nada en él.
